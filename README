@@ -4,5 +4,7 @@ functions from a script that is running on another machine.
 
 This is version 0.1, a pre-alpha release.
 
-See http://www.q12.org/lua
+Original work done by Russell L. Smith:
+http://www.q12.org/lua
 
+Port to 5.x and continuing work by James Snyder
