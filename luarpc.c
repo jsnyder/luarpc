@@ -582,7 +582,8 @@ void my_lua_error (lua_State *L, const char *errmsg)
 {
   exception_init();
 	printf(errmsg);
-  luaL_error (L,errmsg);
+	lua_pushstring(L,errmsg);
+  lua_error (L);
 }
 
 
@@ -782,10 +783,6 @@ static int read_variable (Socket *sock, lua_State *L)
  * function.
  */
 
-/* tags, assigned by lua_RPClibopen() */
-static int handle_tag = 0;
-static int helper_tag = 0;
-
 /* global error handling */
 static int global_error_handler = LUA_NOREF;	/* function reference */
 
@@ -818,7 +815,7 @@ static void deal_with_error (lua_State *L, Handle *h, const char *error_string)
   if (global_error_handler !=  LUA_NOREF) {
     lua_getref (L,global_error_handler);
     lua_pushstring (L,error_string);
-    lua_call (L,1,0);
+		lua_pcall (L,1,0,0);
   }
   else {
     my_lua_error (L,error_string);
@@ -826,9 +823,11 @@ static void deal_with_error (lua_State *L, Handle *h, const char *error_string)
 }
 
 
-static Handle * handle_create ()
+static Handle * handle_create (lua_State *L)
 {
-  Handle *h = (Handle*) malloc (sizeof(Handle));
+  Handle *h = (Handle *)lua_newuserdata(L, sizeof(Handle));
+	luaL_getmetatable(L, "rpc.handle");
+	lua_setmetatable(L, -2);
   h->refcount = 1;
   socket_open (&h->sock);
   h->error_handler = LUA_NOREF;
@@ -855,11 +854,11 @@ static void handle_deref (lua_State *L, Handle *h)
 }
 
 
-static Helper * helper_create (Handle *handle, const char *funcname)
+static Helper * helper_create (lua_State *L, Handle *handle, const char *funcname)
 {
-  Helper *h;
-  int len = strlen(funcname);
-  h = (Helper*) malloc (sizeof (Helper) - NUM_FUNCNAME_CHARS + len + 1);
+	Helper *h = (Helper *)lua_newuserdata(L, sizeof (Helper) - NUM_FUNCNAME_CHARS + strlen(funcname) + 1);
+	luaL_getmetatable(L, "rpc.helper");
+	lua_setmetatable(L, -2);
   h->handle = handle;
   handle_ref (h->handle);
   strcpy (h->funcname,funcname);
@@ -875,10 +874,10 @@ static void helper_destroy (lua_State *L, Helper *h)
 
 
 /* indexing a handle returns a helper */
-static int handle_gettable (lua_State *L)
+static int handle_index (lua_State *L)
 {
   const char *s;
-	Helper *h = (Helper *)lua_newuserdata(L, sizeof(Helper));
+	Helper *h;
 	printf("Running Gettable!");
   MYASSERT (lua_gettop (L) == 2);
 	MYASSERT (lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.handle"));
@@ -887,11 +886,9 @@ static int handle_gettable (lua_State *L)
 
   /* make a new helper object */
   s = lua_tostring (L,2);
-	h = helper_create ((Handle*) lua_touserdata (L,1), s);
+	h = helper_create (L,(Handle*) lua_touserdata (L,1), s);
 
   /* return the helper object */
-	luaL_getmetatable(L, "rpc.helper");
-	lua_setmetatable(L, -2);
   return 1;
 }
 
@@ -911,7 +908,6 @@ static int helper_function (lua_State *L)
 {
   Helper *h;
   Socket *sock;
-	printf("Running Helper!");
   MYASSERT (lua_gettop (L) >= 1);
   MYASSERT (lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.helper"));
   exception_init();
@@ -1015,8 +1011,6 @@ static int helper_gc (lua_State *L)
 /****************************************************************************/
 /* server side handle userdata objects. */
 
-static int server_handle_tag = 0;
-
 struct _ServerHandle {
   Socket lsock;		/* listening socket, always valid if no error */
   Socket asock;		/* accepting socket, valid if connection established */
@@ -1024,9 +1018,11 @@ struct _ServerHandle {
 typedef struct _ServerHandle ServerHandle;
 
 
-static ServerHandle * server_handle_create()
+static ServerHandle * server_handle_create(lua_State *L)
 {
-  ServerHandle *h = (ServerHandle*) malloc (sizeof(ServerHandle));
+  ServerHandle *h = (ServerHandle *)lua_newuserdata(L, sizeof(ServerHandle));
+	luaL_getmetatable(L, "rpc.server_handle");
+	lua_setmetatable(L, -2);
   socket_init (&h->lsock);
   socket_init (&h->asock);
   return h;
@@ -1056,10 +1052,7 @@ static void server_handle_destroy (ServerHandle *h)
 
 static int RPC_open (lua_State *L)
 {
-	/* FIXME?! - Does this need to be fixed?!  */
-  Handle *handle = (Handle *)lua_newuserdata(L, sizeof(Handle));
-	luaL_getmetatable(L, "rpc.helper");
-	lua_setmetatable(L, -2);
+  Handle *handle=0;
 	
   exception_init();
   TRY {
@@ -1068,7 +1061,7 @@ static int RPC_open (lua_State *L)
     struct hostent *host;
     char header[5];
 
-    check_num_args (L,3);
+    check_num_args (L,2);
     if (!lua_isstring (L,1))
       my_lua_error (L,"first argument must be an ip address string");
     ip_port = get_port_number (L,2);
@@ -1090,7 +1083,7 @@ static int RPC_open (lua_State *L)
     ip_address = ntohl ( *((u32*)host->h_addr_list[0]) );
 
     /* make handle */
-    handle = handle_create();
+    handle = handle_create(L);
 
     /* connect the socket to the target server */
     socket_connect (&handle->sock,ip_address,(u16) ip_port);
@@ -1175,7 +1168,7 @@ static int RPC_async (lua_State *L)
 
 static char tmp_errormessage_buffer[200];
 
-static int tmp_errormessage (lua_State *L)
+static int server_err_handler (lua_State *L)
 {
   if (lua_gettop (L) >= 1) {
     strncpy (tmp_errormessage_buffer, lua_tostring (L,1),
@@ -1197,12 +1190,9 @@ static void read_function_call (Socket *sock, lua_State *L)
   u32 len;
   char *funcname;
 
-  /* empty the stack, then record the old _ERRORMESSAGE function */
-  lua_settop (L,0);
-  lua_getglobal (L,"_ERRORMESSAGE");
-
   /* read function name */
   len = socket_read_u32 (sock);	/* function name string length */
+	
   funcname = (char*) alloca (len+1);
   socket_read_string (sock,funcname,len);
   funcname[len] = 0;
@@ -1221,18 +1211,9 @@ static void read_function_call (Socket *sock, lua_State *L)
   /* call the function */
   if (good_function) {
     int nret,error_code;
-    tmp_errormessage_buffer[0] = 0;
-
-    /* set the temporary _ERRORMESSAGE function */
-    lua_pushcfunction (L,tmp_errormessage);
-    lua_setglobal (L,"_ERRORMESSAGE");
-
-    /* do the call */
-    error_code = lua_pcall (L,nargs,LUA_MULTRET, 0); /* FIXME?! */
-
-    /* restore the old _ERRORMESSAGE function */
-    lua_pushvalue (L,1);
-    lua_setglobal (L,"_ERRORMESSAGE");
+				
+    lua_pushcfunction (L,server_err_handler);
+    error_code = lua_pcall (L,nargs,LUA_MULTRET, -1);
 
     /* handle errors */
     if (error_code || tmp_errormessage_buffer[0]) {
@@ -1268,16 +1249,17 @@ static void read_function_call (Socket *sock, lua_State *L)
 
 static ServerHandle *RPC_listen_helper (lua_State *L)
 {
-  ServerHandle *handle = 0;
+	ServerHandle *handle = 0;
   exception_init();
 
   TRY {
     int port;
 
+    check_num_args (L,1);
     port = get_port_number (L,1);
 
     /* make server handle */
-    handle = server_handle_create();
+    handle = server_handle_create(L);
 
     /* make listening socket */
     socket_open (&handle->lsock);
@@ -1299,16 +1281,8 @@ static ServerHandle *RPC_listen_helper (lua_State *L)
 
 static int RPC_listen (lua_State *L)
 {
-  ServerHandle *handle = (ServerHandle *)lua_newuserdata(L, sizeof(ServerHandle));
+  ServerHandle *handle;
 	handle = RPC_listen_helper (L);
-  if (handle) {
-    /* return the handle as user-data */
-		luaL_getmetatable(L, "rpc.server_handle");
-		lua_setmetatable(L, -2);
-  }
-  else {
-    lua_pushnil (L);
-  }
   return 1;
 }
 
@@ -1411,6 +1385,7 @@ static int RPC_dispatch (lua_State *L)
 static int RPC_server (lua_State *L)
 {
   ServerHandle *handle = RPC_listen_helper (L);
+	printf("RPC Server!");
   while (socket_is_open (&handle->lsock)) {
     RPC_dispatch_helper (L,handle);
   }
@@ -1471,21 +1446,18 @@ static int garbage_collect (lua_State *L)
 
 static const luaL_reg rpc_handle[] =
 {
-	{ "__gc",	handle_gc		},
-	{ "__gettable",	handle_gettable		},
+	{ "__index",	handle_index		},
 	{ NULL,		NULL		}
 };
 
 static const luaL_reg rpc_helper[] =
 {
-	{ "__gc",	helper_gc		},
-	{ "__function",	helper_function		},
+	{ "__call",	helper_function		},
 	{ NULL,		NULL		}
 };
 
 static const luaL_reg rpc_server_handle[] =
 {
-	{ "__gc",	server_handle_gc		},
 	{ NULL,		NULL		}
 };
 
@@ -1493,7 +1465,7 @@ static const luaL_reg rpc_server_handle[] =
 LUALIB_API int luaopen_rpc(lua_State *L)
 {
  	static int started = 0;
-  if (started) panic ("lua_RPClibopen() called more than once");
+  if (started) panic ("luaopen_rpc() called more than once");
   started = 1;
 
   net_startup();
@@ -1508,8 +1480,12 @@ LUALIB_API int luaopen_rpc(lua_State *L)
 
 	luaL_newmetatable(L, "rpc.helper");
 	luaL_openlib(L,NULL,rpc_helper,0);
+	
+	
 	luaL_newmetatable(L, "rpc.handle");
 	luaL_openlib(L,NULL,rpc_handle,0);
+	
+	
 	luaL_newmetatable(L, "rpc.server_handle");
  	luaL_openlib(L,NULL,rpc_server_handle,0);
 

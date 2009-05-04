@@ -61,6 +61,9 @@ int main (int argc, char *argv[])
   luaopen_rpc (L);
 
   ret = luaL_dofile (L,filename);
+	if (ret) {
+		printf("%s\n", lua_tostring(L, -1));
+	}
   switch (ret) {
   case LUA_ERRRUN: panic ("Script failed");
   case LUA_ERRSYNTAX: panic ("Syntax error in script");
@@ -69,6 +72,7 @@ int main (int argc, char *argv[])
   case LUA_ERRFILE:
     panic ("Can't open \"%s\" (%s)",filename,strerror(errno));
   }
+
 
   return 0;
 }

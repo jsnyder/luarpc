@@ -33,13 +33,12 @@ function doStuff()
 	-- trigger some errors
 	-- slave.a_bad_function (1,2,3,4,5);
 
+	print(slave)
 
-	-- slave.foo3();
+	slave.foo3();
 	
 	ret = slave.foo1 (123,3.14159,"hello");
-	
-	io.write ("Socket Open\n")
-	
+		
 	io.write ("return value = " .. ret .. "\n");
 
 	-- slave.exit (0);		-- trigger socket error at next call

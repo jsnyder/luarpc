@@ -1,3 +1,4 @@
+require("dbg")
 
 function fn_exists (funcname)
 	return (type (getglobal (funcname)) == "function");
@@ -24,22 +25,22 @@ end
 
 io.write ("server started\n")
 
-RPC_server (12345);
+--RPC_server (12345);
 
 
 -- an alternative way
 
--- count = 0;
--- handle = RPC_listen (12345);
--- io.write ("living\n")
--- RPC_peek (handle)
--- io.write ("living2\n")
--- while 1 do
--- 	if RPC_peek (handle) then
--- 		io.write ("dispatch\n")
--- 		RPC_dispatch (handle)
--- 	else
--- 		io.write ("do dee do " .. count .. "...\n")
--- 	end
--- 	count = count + 1;
--- end
+count = 0;
+handle = RPC_listen (12345);
+io.write ("living\n")
+RPC_peek (handle)
+io.write ("living2\n")
+while 1 do
+	if RPC_peek (handle) then
+		io.write ("dispatch\n")
+		RPC_dispatch (handle)
+	else
+		-- io.write ("do dee do " .. count .. "...\n")
+	end
+	count = count + 1;
+end
