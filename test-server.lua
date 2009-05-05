@@ -1,6 +1,6 @@
 
 function fn_exists (funcname)
-	return (type (getglobal (funcname)) == "function");
+	return type(_G[funcname]) == "function"
 end
 
 

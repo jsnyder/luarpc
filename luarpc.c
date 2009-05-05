@@ -637,12 +637,13 @@ static int get_port_number (lua_State *L, int i)
 enum {
   RPC_NIL=0,
   RPC_NUMBER,
+	RPC_BOOLEAN,
   RPC_STRING,
   RPC_TABLE,
   RPC_TABLE_END
 };
 
-enum { RPC_PROTOCOL_VERSION = 2 };
+enum { RPC_PROTOCOL_VERSION = 3 };
 
 
 /* prototypes */
@@ -702,12 +703,25 @@ static void write_variable (Socket *sock, lua_State *L, int var_index)
     socket_write_u8 (sock,RPC_NIL);
     break;
 
+	case LUA_TBOOLEAN:
+		socket_write_u8 (sock,RPC_BOOLEAN);
+		socket_write_u8 (sock, ( u8 )lua_toboolean(L, var_index));
+		break;
+
   case LUA_TFUNCTION:
     my_lua_error (L,"can't pass functions to a remote function");
     break;
 
   case LUA_TUSERDATA:
     my_lua_error (L,"can't pass user data to a remote function");
+    break;
+
+  case LUA_TTHREAD:
+    my_lua_error (L,"can't pass threads to a remote function");
+    break;
+
+  case LUA_TLIGHTUSERDATA:
+    my_lua_error (L,"can't pass light user data to a remote function");
     break;
   }
 
@@ -743,6 +757,10 @@ static int read_variable (Socket *sock, lua_State *L)
 
   case RPC_NIL:
     lua_pushnil (L);
+    break;
+
+  case RPC_BOOLEAN:
+    lua_pushboolean (L,socket_read_u8 (sock));
     break;
 
   case RPC_NUMBER:
@@ -1195,6 +1213,7 @@ static void read_function_call (Socket *sock, lua_State *L)
   socket_read_string (sock,funcname,len);
   funcname[len] = 0;
 
+	/* push error handler for pcall onto stack */
 	lua_pushcfunction (L,server_err_handler);
 
   /* get function */
@@ -1211,6 +1230,7 @@ static void read_function_call (Socket *sock, lua_State *L)
   /* call the function */
   if (good_function) {
     int nret,error_code;
+		tmp_errormessage_buffer[0] = 0;
 
     error_code = lua_pcall (L,nargs,LUA_MULTRET, stackpos);
 

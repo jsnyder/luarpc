@@ -35,13 +35,15 @@ function doStuff()
 	-- slave.exit (0);		-- trigger socket error at next call
 
 	slave.foo2 (tab);
-
+	
 	if not slave.fn_exists ("blah") then
 		io.write ("blah does not exist\n");
 	else
 		slave.blah();
 	end
 
+	print("test")
+	
 	xxx = slave.foo2;
 	xxx (tab);
 
