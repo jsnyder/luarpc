@@ -1,5 +1,3 @@
-require("dbg")
-
 function fn_exists (funcname)
 	return (type (getglobal (funcname)) == "function");
 end
@@ -22,6 +20,8 @@ function foo3 (tab)
 	blah();
 end
 
+
+foovar = 23
 
 io.write ("server started\n")
 
