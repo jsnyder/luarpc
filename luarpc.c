@@ -10,11 +10,11 @@
 #include <stdarg.h>
 #include <setjmp.h>
 
-#ifdef WIN32
+#ifdef WIN32 /* BEGIN NEEDED INCLUDES FOR WIN32 W/ SOCKETS */
 
 #include <windows.h>
 
-#else /* not WIN32 */
+#else /* BEGIN NEEDED INCLUDES FOR UNIX W/ SOCKETS */
 
 #include <string.h>
 #include <errno.h>
@@ -29,7 +29,7 @@
 #include <netinet/in.h>
 #include <sys/time.h>
 
-#endif /* WIN32 */
+#endif /* END NEEDED INCLUDES W/ SOCKETS */
 
 #include "lua.h"
 #include "lualib.h"
@@ -106,7 +106,7 @@ static void debug (const char *msg, ...)
 /****************************************************************************/
 /* handle the differences between winsock and unix */
 
-#ifdef WIN32
+#ifdef WIN32  /*  BEGIN WIN32 SOCKET SETUP  */
 
 #define close closesocket
 #define read(fd,buf,len) recv ((fd),(buf),(len),0)
@@ -216,7 +216,7 @@ const char * sock_strerror (int n)
 }
 
 
-#else /* unix, not WIN32 */
+#else /* BEGIN UNIX SOCKET SETUP  */
 
 #define SOCKTYPE int
 #define net_startup() ;
@@ -224,7 +224,7 @@ const char * sock_strerror (int n)
 #define sock_strerror strerror
 #define INVALID_SOCKET (-1)
 
-#endif /* WIN32 */
+#endif /* END UNIX SOCKET SETUP */
 
 /****************************************************************************/
 /* more error handling */

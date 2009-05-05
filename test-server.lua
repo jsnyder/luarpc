@@ -16,10 +16,17 @@ function foo2 (tab)
 end
 
 
+function execfunc( fstring, input )
+	func = loadstring(fstring)
+	return func(input)
+end
+
 -- this function will fail
 function foo3 (tab)
 	blah();
 end
+
+testvar = 23
 
 
 io.write ("server started\n")

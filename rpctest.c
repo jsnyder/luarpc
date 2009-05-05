@@ -64,15 +64,6 @@ int main (int argc, char *argv[])
 	if (ret) {
 		printf("%s\n", lua_tostring(L, -1));
 	}
-  switch (ret) {
-  case LUA_ERRRUN: panic ("Script failed");
-  case LUA_ERRSYNTAX: panic ("Syntax error in script");
-  case LUA_ERRMEM: panic ("Out of memory");
-  case LUA_ERRERR: panic ("Error while running _ERRORMESSAGE");
-  case LUA_ERRFILE:
-    panic ("Can't open \"%s\" (%s)",filename,strerror(errno));
-  }
-
 
   return 0;
 }

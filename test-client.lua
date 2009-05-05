@@ -36,6 +36,13 @@ function doStuff()
 
 	slave.foo2 (tab);
 	
+	function squareval(x) 
+		print(x^2)
+		return x^2
+	end
+	
+	print(slave.execfunc( string.dump(squareval), 8 ))
+	
 	if not slave.fn_exists ("blah") then
 		io.write ("blah does not exist\n");
 	else
