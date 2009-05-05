@@ -3,6 +3,7 @@ function error_handler (message)
 	io.write ("MY ERROR: " .. message .. "\n");
 end
 
+
 io.write ("client started\n")
 
 xxx = nil;
@@ -13,29 +14,23 @@ tab = {a=1.4142, b=2};
 function doStuff()
 	-- set the default error handler for all handles
 	RPC_on_error (error_handler);
-	
-	io.write ("Handler Set\n")
-	
+
 	local slave,err = RPC_open ("localhost",12345);
-	
-	io.write ("Socket Open\n")
-		
 	if not slave then
 		io.write ("error: " .. err .. "\n");
 		exit();
 	end
-	
 
-	
 	-- set the error handler for a specific handle
-	-- RPC_on_error (slave,error_handler);
+	--RPC_on_error (slave,error_handler);
 
 	-- trigger some errors
-	-- slave.a_bad_function (1,2,3,4,5);
-	
+	slave.a_bad_function (1,2,3,4,5);
+
+	slave.foo3();
+
 	ret = slave.foo1 (123,3.14159,"hello");
-		
-	-- io.write ("return value = " .. ret .. "\n");
+	io.write ("return value = " .. ret .. "\n");
 
 	-- slave.exit (0);		-- trigger socket error at next call
 

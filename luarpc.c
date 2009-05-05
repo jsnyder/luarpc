@@ -738,6 +738,7 @@ static void read_table (Socket *sock, lua_State *L)
 static int read_variable (Socket *sock, lua_State *L)
 {
   u8 type = socket_read_u8 (sock);
+
   switch (type) {
 
   case RPC_NIL:
@@ -811,7 +812,6 @@ typedef struct _Helper Helper;
 
 static void deal_with_error (lua_State *L, Handle *h, const char *error_string)
 {	
-	printf("Error: %s",error_string);
   if (global_error_handler !=  LUA_NOREF) {
     lua_getref (L,global_error_handler);
     lua_pushstring (L,error_string);
@@ -1190,13 +1190,12 @@ static void read_function_call (Socket *sock, lua_State *L)
   char *funcname;
 
   /* read function name */
-  len = socket_read_u32 (sock);	/* function name string length */
-	printf("func name len: %d\n", len);
-	
+  len = socket_read_u32 (sock);	/* function name string length */	
   funcname = (char*) alloca (len+1);
   socket_read_string (sock,funcname,len);
-	printf("func name: %s\n", funcname);
   funcname[len] = 0;
+
+	lua_pushcfunction (L,server_err_handler);
 
   /* get function */
   stackpos = lua_gettop (L);
@@ -1205,7 +1204,6 @@ static void read_function_call (Socket *sock, lua_State *L)
 
   /* read number of arguments */
   nargs = socket_read_u32 (sock);
-	printf("func args: %d\n", nargs);
 
   /* read in each argument, leave it on the stack */
   for (i=0; i<nargs; i++) read_variable (sock,L);
@@ -1213,9 +1211,8 @@ static void read_function_call (Socket *sock, lua_State *L)
   /* call the function */
   if (good_function) {
     int nret,error_code;
-				
-    lua_pushcfunction (L,server_err_handler);
-    error_code = lua_pcall (L,nargs,LUA_MULTRET, 0);
+
+    error_code = lua_pcall (L,nargs,LUA_MULTRET, stackpos);
 
     /* handle errors */
     if (error_code || tmp_errormessage_buffer[0]) {
