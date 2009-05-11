@@ -240,19 +240,6 @@ enum {
   ERR_PROTOCOL = MAXINT - 102 /* some error in the received protocol */
 };
 
-
-/* return a string representation of an error number */
-
-static const char * errorString (int n)
-{
-  switch (n) {
-  case ERR_EOF: return "connection closed unexpectedly (\"end of file\")";
-  case ERR_CLOSED: return "operation requested on a closed socket";
-  case ERR_PROTOCOL: return "error in the received Lua-RPC protocol";
-  default: return sock_strerror (n);
-  }
-}
-
 /****************************************************************************/
 /* exception handling using setjmp()/longjmp().
  *
