@@ -12,6 +12,8 @@ LUA=/Users/jsnyder/Sources/lua-5.1.4
 LUAINC=$(LUA)/include
 LUALIB=$(LUA)/lib
 
+LIBTOOL=libtool --tag=CC --silent
+
 # compiler, arguments and libs for GCC under unix
 CC=gcc -Wall
 CFLAGS=-ansi -pedantic -g
@@ -33,6 +35,11 @@ rpctest: rpctest.c luarpc.o
 
 luarpc.o: luarpc.c luarpc.h
 	$(CC) -c $(CFLAGS) -I$(LUAINC) luarpc.c
+
+module: luarpc.c
+	$(LIBTOOL) --mode=compile cc -c luarpc.c
+	$(LIBTOOL) --mode=link cc -rpath $(LUALIB) -o libluarpc.la luarpc.lo
+	mv .libs/libluarpc.0.dylib luarpc.so
 
 clean-unix:
 	-rm -f *~ *.o *.obj a.out rpctest rpctest.exe core

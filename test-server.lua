@@ -1,3 +1,4 @@
+require("luarpc")
 
 function fn_exists (funcname)
 	return type(_G[funcname]) == "function"

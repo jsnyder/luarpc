@@ -1,3 +1,4 @@
+require("luarpc")
 
 function error_handler (message)
 	io.write ("MY ERROR: " .. message .. "\n");
@@ -35,6 +36,8 @@ function doStuff()
 	-- slave.exit (0);		-- trigger socket error at next call
 
 	slave.foo2 (tab);
+	
+	print (slave.testvar)
 	
 	function squareval(x) 
 		print(x^2)

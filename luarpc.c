@@ -40,7 +40,7 @@
 /****************************************************************************/
 /* parameters */
 
-#define MAXCON 10	/* maximum number of waiting server connections */
+#define MAXCON 10 /* maximum number of waiting server connections */
 
 /* a kind of silly way to get the maximum int, but oh well ... */
 #define MAXINT ((int)((((unsigned int)(-1)) << 1) >> 1))
@@ -235,9 +235,9 @@ const char * sock_strerror (int n)
  */
 
 enum {
-  ERR_EOF      = MAXINT - 100,	/* reached end of file on socket */
-  ERR_CLOSED   = MAXINT - 101,	/* attempted operation on closed socket */
-  ERR_PROTOCOL = MAXINT - 102	/* some error in the received protocol */
+  ERR_EOF      = MAXINT - 100,  /* reached end of file on socket */
+  ERR_CLOSED   = MAXINT - 101,  /* attempted operation on closed socket */
+  ERR_PROTOCOL = MAXINT - 102 /* some error in the received protocol */
 };
 
 
@@ -258,18 +258,18 @@ static const char * errorString (int n)
  *
  * do this:
  *
- *	TRY {
- *	  some_stuff();
- *	  THROW (error_code);
- *	  // if THROW is not called, you must call ENDTRY before the end of
- *	  // the TRY block (this includes before any `return' is called).
- *	  ENDTRY;
- *	}
- *	CATCH {
- *	  // *all* errors caught here, not just specific ones
- *	  there_is_an_error (ERRCODE);
- *	  if (dont_handle_here()) THROW (ERRCODE);
- *	}
+ *  TRY {
+ *    some_stuff();
+ *    THROW (error_code);
+ *    // if THROW is not called, you must call ENDTRY before the end of
+ *    // the TRY block (this includes before any `return' is called).
+ *    ENDTRY;
+ *  }
+ *  CATCH {
+ *    // *all* errors caught here, not just specific ones
+ *    there_is_an_error (ERRCODE);
+ *    if (dont_handle_here()) THROW (ERRCODE);
+ *  }
  */
 
 /* the exception stack. the top of the stack is the environment to longjmp()
@@ -331,7 +331,7 @@ static void exception_throw (int n)
 /* socket structure */
 
 struct _Socket {
-  SOCKTYPE fd;			/* INVALID_SOCKET if socket is closed */
+  SOCKTYPE fd;      /* INVALID_SOCKET if socket is closed */
 };
 typedef struct _Socket Socket;
 
@@ -581,7 +581,7 @@ static int socket_readable (Socket *sock)
 void my_lua_error (lua_State *L, const char *errmsg)
 {
   exception_init();
-	lua_pushstring(L,errmsg);
+  lua_pushstring(L,errmsg);
   lua_error (L);
 }
 
@@ -590,11 +590,11 @@ void my_lua_error (lua_State *L, const char *errmsg)
 
 static int check_num_args (lua_State *L, int desired_n)
 {
-  int n = lua_gettop (L);		/* number of arguments on stack */
+  int n = lua_gettop (L);   /* number of arguments on stack */
   if (n != desired_n) {
     char s[100];
     sprintf (s,"must have %d argument%c",desired_n,
-	     (desired_n == 1) ? '\0' : 's');
+       (desired_n == 1) ? '\0' : 's');
     my_lua_error (L,s);
   }
   return n;
@@ -602,14 +602,14 @@ static int check_num_args (lua_State *L, int desired_n)
 
 static int ismetatable_type (lua_State *L, int ud, const char *tname)
 {
-	if (lua_getmetatable(L, ud)) {  /* does it have a metatable? */
+  if (lua_getmetatable(L, ud)) {  /* does it have a metatable? */
     lua_getfield(L, LUA_REGISTRYINDEX, tname);  /* get correct metatable */
     if (lua_rawequal(L, -1, -2)) {  /* does it have the correct mt? */
       lua_pop(L, 2);  /* remove both metatables */
       return 1;
     }
   }
-	return 0;
+  return 0;
 }
 
 /* check that a given stack value is a port number, and return its value. */
@@ -637,10 +637,12 @@ static int get_port_number (lua_State *L, int i)
 enum {
   RPC_NIL=0,
   RPC_NUMBER,
-	RPC_BOOLEAN,
+  RPC_BOOLEAN,
   RPC_STRING,
   RPC_TABLE,
-  RPC_TABLE_END
+  RPC_TABLE_END,
+  RPC_FUNCTION,
+  RPC_FUNCTION_END,
 };
 
 enum { RPC_PROTOCOL_VERSION = 3 };
@@ -657,7 +659,7 @@ static int read_variable (Socket *sock, lua_State *L);
 
 static void write_table (Socket *sock, lua_State *L, int table_index)
 {
-  lua_pushnil (L);	/* push first key */
+  lua_pushnil (L);  /* push first key */
   while (lua_next (L,table_index)) {
     /* next key and value were pushed on the stack */
     write_variable (sock,L,lua_gettop (L)-1);
@@ -666,7 +668,37 @@ static void write_table (Socket *sock, lua_State *L, int table_index)
     lua_pop (L,1);
   }
 }
+/* STARTING POINT FOR SENDING FUNCTIONS OVER THE WIRE
+static int function_writer (lua_State *L, const void* b, size_t size, void* B) {
+  (void)L;
+  luaL_addlstring((luaL_Buffer*) B, (const char *)b, size);
+  return 0;
+}
 
+
+static void str_dump (lua_State *L) {
+  luaL_Buffer b;
+  luaL_checktype(L, 1, LUA_TFUNCTION);
+  lua_settop(L, 1);
+  luaL_buffinit(L,&b);
+  if (lua_dump(L, function_writer, &b) != 0)
+    luaL_error(L, "unable to dump given function");
+  luaL_pushresult(&b);
+  return 1;
+}
+
+
+static void write_function (Socket *sock, lua_State *L, int table_index)
+{
+  luaL_Buffer b;
+  luaL_checktype(L, table_index, LUA_TFUNCTION);
+  lua_settop(L, table_index);
+  luaL_buffinit(L,&b);
+  if (lua_dump(L, function_writer, &b) != 0)
+    luaL_error(L, "unable to dump given function");
+  //int lua_dump (lua_State *L, lua_Writer writer, void *data);
+}
+*/
 
 /* write a variable at the given index in the stack. the index must be absolute
  * (i.e. positive).
@@ -703,12 +735,15 @@ static void write_variable (Socket *sock, lua_State *L, int var_index)
     socket_write_u8 (sock,RPC_NIL);
     break;
 
-	case LUA_TBOOLEAN:
-		socket_write_u8 (sock,RPC_BOOLEAN);
-		socket_write_u8 (sock, ( u8 )lua_toboolean(L, var_index));
-		break;
+  case LUA_TBOOLEAN:
+    socket_write_u8 (sock,RPC_BOOLEAN);
+    socket_write_u8 (sock, ( u8 )lua_toboolean(L, var_index));
+    break;
 
   case LUA_TFUNCTION:
+ /* socket_write_u8 (sock,RPC_FUNCTION);
+    write_function (sock,L,var_index);
+    socket_write_u8 (sock,RPC_FUNCTION_END); */
     my_lua_error (L,"can't pass functions to a remote function");
     break;
 
@@ -784,7 +819,7 @@ static int read_variable (Socket *sock, lua_State *L)
     return 0;
 
   default:
-    THROW (ERR_PROTOCOL);	/* unknown type in request */
+    THROW (ERR_PROTOCOL); /* unknown type in request */
   }
   return 1;
 }
@@ -802,15 +837,15 @@ static int read_variable (Socket *sock, lua_State *L)
  */
 
 /* global error handling */
-static int global_error_handler = LUA_NOREF;	/* function reference */
+static int global_error_handler = LUA_NOREF;  /* function reference */
 
 
 struct _Handle {
-  int refcount;			/* delete the object when this goes to 0 */
-  Socket sock;			/* the handle socket */
-  int error_handler;		/* function reference */
-  int async;			/* nonzero if async mode being used */
-  int read_reply_count;		/* number of async call return values to read */
+  int refcount;     /* delete the object when this goes to 0 */
+  Socket sock;      /* the handle socket */
+  int error_handler;    /* function reference */
+  int async;      /* nonzero if async mode being used */
+  int read_reply_count;   /* number of async call return values to read */
 };
 typedef struct _Handle Handle;
 
@@ -818,8 +853,8 @@ typedef struct _Handle Handle;
 #define NUM_FUNCNAME_CHARS 4
 
 struct _Helper {
-  Handle *handle;			/* pointer to handle object */
-  char funcname[NUM_FUNCNAME_CHARS];	/* name of the function */
+  Handle *handle;     /* pointer to handle object */
+  char funcname[NUM_FUNCNAME_CHARS];  /* name of the function */
 };
 typedef struct _Helper Helper; 
 
@@ -829,11 +864,11 @@ typedef struct _Helper Helper;
  */
 
 static void deal_with_error (lua_State *L, Handle *h, const char *error_string)
-{	
+{ 
   if (global_error_handler !=  LUA_NOREF) {
     lua_getref (L,global_error_handler);
     lua_pushstring (L,error_string);
-		lua_pcall (L,1,0,0);
+    lua_pcall (L,1,0,0);
   }
   else {
     my_lua_error (L,error_string);
@@ -844,8 +879,8 @@ static void deal_with_error (lua_State *L, Handle *h, const char *error_string)
 static Handle * handle_create (lua_State *L)
 {
   Handle *h = (Handle *)lua_newuserdata(L, sizeof(Handle));
-	luaL_getmetatable(L, "rpc.handle");
-	lua_setmetatable(L, -2);
+  luaL_getmetatable(L, "rpc.handle");
+  lua_setmetatable(L, -2);
   h->refcount = 1;
   socket_open (&h->sock);
   h->error_handler = LUA_NOREF;
@@ -874,9 +909,9 @@ static void handle_deref (lua_State *L, Handle *h)
 
 static Helper * helper_create (lua_State *L, Handle *handle, const char *funcname)
 {
-	Helper *h = (Helper *)lua_newuserdata(L, sizeof (Helper) - NUM_FUNCNAME_CHARS + strlen(funcname) + 1);
-	luaL_getmetatable(L, "rpc.helper");
-	lua_setmetatable(L, -2);
+  Helper *h = (Helper *)lua_newuserdata(L, sizeof (Helper) - NUM_FUNCNAME_CHARS + strlen(funcname) + 1);
+  luaL_getmetatable(L, "rpc.helper");
+  lua_setmetatable(L, -2);
   h->handle = handle;
   handle_ref (h->handle);
   strcpy (h->funcname,funcname);
@@ -895,16 +930,16 @@ static void helper_destroy (lua_State *L, Helper *h)
 static int handle_index (lua_State *L)
 {
   const char *s;
-	Helper *h;
+  Helper *h;
 
   MYASSERT (lua_gettop (L) == 2);
-	MYASSERT (lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.handle"));
+  MYASSERT (lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.handle"));
   if (lua_type (L,2) != LUA_TSTRING)
     my_lua_error (L,"can't index a handle with a non-string");
 
   /* make a new helper object */
   s = lua_tostring (L,2);
-	h = helper_create (L,(Handle*) lua_touserdata (L,1), s);
+  h = helper_create (L,(Handle*) lua_touserdata (L,1), s);
 
   /* return the helper object */
   return 1;
@@ -916,7 +951,7 @@ static int handle_index (lua_State *L)
 static int handle_gc (lua_State *L)
 {
   MYASSERT (lua_gettop (L) == 1);
-	MYASSERT (lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.handle"));
+  MYASSERT (lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.handle"));
   handle_deref (L,(Handle*) lua_touserdata (L,1));
   return 0;
 }
@@ -928,7 +963,7 @@ static int helper_function (lua_State *L)
   MYASSERT (lua_gettop (L) >= 1);
   MYASSERT (lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.helper"));
   exception_init();
-	
+  
   /* get helper object and its socket */
   h = (Helper*) lua_touserdata (L,1);
   sock = &h->handle->sock;
@@ -939,23 +974,23 @@ static int helper_function (lua_State *L)
 
     /* first read out any pending return values for old async calls */
     for (; h->handle->read_reply_count > 0; h->handle->read_reply_count--) {
-      ret_code = socket_read_u8 (sock);		/* return code */
+      ret_code = socket_read_u8 (sock);   /* return code */
       if (ret_code==0) {
-	/* read return arguments, ignore everything we read */
-	nret = socket_read_u32 (sock);
-	for (i=0; i < ((int) nret); i++) read_variable (sock,L);
-	lua_pop (L,nret);
+  /* read return arguments, ignore everything we read */
+  nret = socket_read_u32 (sock);
+  for (i=0; i < ((int) nret); i++) read_variable (sock,L);
+  lua_pop (L,nret);
       }
       else {
-	/* read error and handle it */
-	u32 code = socket_read_u32 (sock);
-	u32 len = socket_read_u32 (sock);
-	char *err_string = (char*) alloca (len+1);
-	socket_read_string (sock,err_string,len);
-	err_string[len] = 0;
-	ENDTRY;
-	deal_with_error (L,h->handle,err_string);
-	return 0;
+  /* read error and handle it */
+  u32 code = socket_read_u32 (sock);
+  u32 len = socket_read_u32 (sock);
+  char *err_string = (char*) alloca (len+1);
+  socket_read_string (sock,err_string,len);
+  err_string[len] = 0;
+  ENDTRY;
+  deal_with_error (L,h->handle,err_string);
+  return 0;
       }
     }
 
@@ -967,7 +1002,7 @@ static int helper_function (lua_State *L)
     /* write number of arguments */
     n = lua_gettop (L);
     socket_write_u32 (sock,n-1);
-		
+    
     /* write each argument */
     for (i=2; i<=n; i++) write_variable (sock,L,i);
 
@@ -996,7 +1031,7 @@ static int helper_function (lua_State *L)
       socket_read_string (sock,err_string,len);
       err_string[len] = 0;
       ENDTRY;
-			/* WTF: we're getting no error here!!! */
+      /* WTF: we're getting no error here!!! */
       deal_with_error (L,h->handle,err_string);
       return 0;
     }
@@ -1004,7 +1039,7 @@ static int helper_function (lua_State *L)
   CATCH {
     if (ERRCODE == ERR_CLOSED) {
       my_lua_error (L,"can't refer to a remote function after the handle has "
-		    "been closed");
+        "been closed");
     }
     else {
       deal_with_error (L, h->handle, errorString (ERRCODE));
@@ -1029,8 +1064,8 @@ static int helper_gc (lua_State *L)
 /* server side handle userdata objects. */
 
 struct _ServerHandle {
-  Socket lsock;		/* listening socket, always valid if no error */
-  Socket asock;		/* accepting socket, valid if connection established */
+  Socket lsock;   /* listening socket, always valid if no error */
+  Socket asock;   /* accepting socket, valid if connection established */
 };
 typedef struct _ServerHandle ServerHandle;
 
@@ -1038,8 +1073,8 @@ typedef struct _ServerHandle ServerHandle;
 static ServerHandle * server_handle_create(lua_State *L)
 {
   ServerHandle *h = (ServerHandle *)lua_newuserdata(L, sizeof(ServerHandle));
-	luaL_getmetatable(L, "rpc.server_handle");
-	lua_setmetatable(L, -2);
+  luaL_getmetatable(L, "rpc.server_handle");
+  lua_setmetatable(L, -2);
   socket_init (&h->lsock);
   socket_init (&h->asock);
   return h;
@@ -1070,7 +1105,7 @@ static void server_handle_destroy (ServerHandle *h)
 static int RPC_open (lua_State *L)
 {
   Handle *handle=0;
-	
+  
   exception_init();
   TRY {
     int ip_port;
@@ -1112,7 +1147,7 @@ static int RPC_open (lua_State *L)
     header[3] = 'C';
     header[4] = RPC_PROTOCOL_VERSION;
     socket_write_string (&handle->sock,header,sizeof(header));
-		
+    
     ENDTRY;
     return 1;
   }
@@ -1189,7 +1224,7 @@ static int server_err_handler (lua_State *L)
 {
   if (lua_gettop (L) >= 1) {
     strncpy (tmp_errormessage_buffer, lua_tostring (L,1),
-	     sizeof (tmp_errormessage_buffer));
+       sizeof (tmp_errormessage_buffer));
     tmp_errormessage_buffer [sizeof (tmp_errormessage_buffer)-1] = 0;
   }
   return 0;
@@ -1208,13 +1243,13 @@ static void read_function_call (Socket *sock, lua_State *L)
   char *funcname;
 
   /* read function name */
-  len = socket_read_u32 (sock);	/* function name string length */	
+  len = socket_read_u32 (sock); /* function name string length */ 
   funcname = (char*) alloca (len+1);
   socket_read_string (sock,funcname,len);
   funcname[len] = 0;
 
-	/* push error handler for pcall onto stack */
-	lua_pushcfunction (L,server_err_handler);
+  /* push error handler for pcall onto stack */
+  lua_pushcfunction (L,server_err_handler);
 
   /* get function */
   stackpos = lua_gettop (L);
@@ -1230,7 +1265,7 @@ static void read_function_call (Socket *sock, lua_State *L)
   /* call the function */
   if (good_function) {
     int nret,error_code;
-		tmp_errormessage_buffer[0] = 0;
+    tmp_errormessage_buffer[0] = 0;
 
     error_code = lua_pcall (L,nargs,LUA_MULTRET, stackpos);
 
@@ -1268,7 +1303,7 @@ static void read_function_call (Socket *sock, lua_State *L)
 
 static ServerHandle *RPC_listen_helper (lua_State *L)
 {
-	ServerHandle *handle = 0;
+  ServerHandle *handle = 0;
   exception_init();
 
   TRY {
@@ -1284,7 +1319,7 @@ static ServerHandle *RPC_listen_helper (lua_State *L)
     socket_open (&handle->lsock);
     socket_bind (&handle->lsock,INADDR_ANY,(u16) port);
     socket_listen (&handle->lsock,MAXCON);
-		
+    
     ENDTRY;
     return handle;
   }
@@ -1301,7 +1336,7 @@ static ServerHandle *RPC_listen_helper (lua_State *L)
 static int RPC_listen (lua_State *L)
 {
   ServerHandle *handle;
-	handle = RPC_listen_helper (L);
+  handle = RPC_listen_helper (L);
   return 1;
 }
 
@@ -1343,15 +1378,15 @@ static void RPC_dispatch_helper (lua_State *L, ServerHandle *handle)
     /* if accepting socket is open, read function calls */
     if (socket_is_open (&handle->asock)) {
       TRY {
-	read_function_call (&handle->asock,L);
-	ENDTRY;
+  read_function_call (&handle->asock,L);
+  ENDTRY;
       }
       CATCH {
-	/* if the client has closed the connection, close our side
-	 * gracefully too.
-	 */
-	socket_close (&handle->asock);
-	if (ERRCODE != ERR_EOF && ERRCODE != ERR_PROTOCOL) THROW (ERRCODE);
+  /* if the client has closed the connection, close our side
+   * gracefully too.
+   */
+  socket_close (&handle->asock);
+  if (ERRCODE != ERR_EOF && ERRCODE != ERR_PROTOCOL) THROW (ERRCODE);
       }
     }
     else {
@@ -1364,14 +1399,14 @@ static void RPC_dispatch_helper (lua_State *L, ServerHandle *handle)
       /* check that the header is ok */
       socket_read_string (&handle->asock,header,sizeof(header));
       if (header[0] != 'L' ||
-	  header[1] != 'R' ||
-	  header[2] != 'P' ||
-	  header[3] != 'C' ||
-	  header[4] != RPC_PROTOCOL_VERSION) {
-	/* bad remote function call header, close the connection */
-	socket_close (&handle->asock);
-	ENDTRY;
-	return;
+    header[1] != 'R' ||
+    header[2] != 'P' ||
+    header[3] != 'C' ||
+    header[4] != RPC_PROTOCOL_VERSION) {
+  /* bad remote function call header, close the connection */
+  socket_close (&handle->asock);
+  ENDTRY;
+  return;
       }
     }
 
@@ -1462,25 +1497,25 @@ static int garbage_collect (lua_State *L)
 
 static const luaL_reg rpc_handle[] =
 {
-	{ "__index",	handle_index },
-	{ NULL,		NULL		}
+  { "__index",  handle_index },
+  { NULL,   NULL    }
 };
 
 static const luaL_reg rpc_helper[] =
 {
-	{ "__call",	helper_function		},
-	{ NULL,		NULL		}
+  { "__call", helper_function   },
+  { NULL,   NULL    }
 };
 
 static const luaL_reg rpc_server_handle[] =
 {
-	{ NULL,		NULL		}
+  { NULL,   NULL    }
 };
 
 
-LUALIB_API int luaopen_rpc(lua_State *L)
+LUALIB_API int luaopen_luarpc(lua_State *L)
 {
- 	static int started = 0;
+  static int started = 0;
   if (started) panic ("luaopen_rpc() called more than once");
   started = 1;
 
@@ -1494,17 +1529,17 @@ LUALIB_API int luaopen_rpc(lua_State *L)
   lua_register (L,"RPC_dispatch",RPC_dispatch);
   lua_register (L,"RPC_async",RPC_async);
 
-	luaL_newmetatable(L, "rpc.helper");
-	luaL_openlib(L,NULL,rpc_helper,0);
-	
-	luaL_newmetatable(L, "rpc.handle");
-	luaL_openlib(L,NULL,rpc_handle,0);
-	
-	luaL_newmetatable(L, "rpc.server_handle");
- 	luaL_openlib(L,NULL,rpc_server_handle,0);
+  luaL_newmetatable(L, "rpc.helper");
+  luaL_openlib(L,NULL,rpc_helper,0);
+  
+  luaL_newmetatable(L, "rpc.handle");
+  luaL_openlib(L,NULL,rpc_handle,0);
+  
+  luaL_newmetatable(L, "rpc.server_handle");
+  luaL_openlib(L,NULL,rpc_server_handle,0);
 
   if (sizeof(double) != 8)
     debug ("internal error: sizeof(double) != 8");
 
- 	return 1;
+  return 1;
 }

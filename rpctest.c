@@ -58,7 +58,7 @@ int main (int argc, char *argv[])
   /* start lua and connect to all the standard libraries */
   L = lua_open (); /* used to pass 4096 for stack size */
 	luaL_openlibs(L);
-  luaopen_rpc (L);
+  luaopen_luarpc (L);
 
   ret = luaL_dofile (L,filename);
 	if (ret) {
