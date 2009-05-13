@@ -35,91 +35,15 @@
 #include "lualib.h"
 #include "lauxlib.h"
 
+#include "luarpc_rpc.h"
+
 #include "config.h"
 
-/****************************************************************************/
-/* parameters */
-
-#define MAXCON 10 /* maximum number of waiting server connections */
-
-/* a kind of silly way to get the maximum int, but oh well ... */
-#define MAXINT ((int)((((unsigned int)(-1)) << 1) >> 1))
-
-/****************************************************************************/
-/* error handling */
-
-/* allow special handling for GCC compiler */
-#ifdef __GNUC__
-#define DOGCC(x) x
-#else
-#define DOGCC(x) /* */
-#endif
-
-
-/* assertions */
-
-#ifndef NDEBUG
-#ifdef __GNUC__
-#define MYASSERT(a) if (!(a)) debug ( \
-  "assertion \"" #a "\" failed in %s() [%s]",__FUNCTION__,__FILE__);
-#else
-#define MYASSERT(a) if (!(a)) debug ( \
-  "assertion \"" #a "\" failed in %s:%d",__FILE__,__LINE__);
-#endif
-#else
-#define MYASSERT(a) ;
-#endif
-
-
-static void errorMessage (const char *msg, va_list ap)
-{
-  fflush (stdout);
-  fflush (stderr);
-  fprintf (stderr,"\nError: ");
-  vfprintf (stderr,msg,ap);
-  fprintf (stderr,"\n\n");
-  fflush (stderr);
-}
-
-
-DOGCC(static void panic (const char *msg, ...)
-      __attribute__ ((noreturn,unused));)
-static void panic (const char *msg, ...)
-{
-  va_list ap;
-  va_start (ap,msg);
-  errorMessage (msg,ap);
-  exit (1);
-}
-
-
-DOGCC(static void debug (const char *msg, ...)
-      __attribute__ ((noreturn,unused));)
-static void debug (const char *msg, ...)
-{
-  va_list ap;
-  va_start (ap,msg);
-  errorMessage (msg,ap);
-  abort();
-}
 
 /****************************************************************************/
 /* handle the differences between winsock and unix */
 
 #ifdef WIN32  /*  BEGIN WIN32 SOCKET SETUP  */
-
-#define close closesocket
-#define read(fd,buf,len) recv ((fd),(buf),(len),0)
-#define write(fd,buf,len) send ((fd),(buf),(len),0)
-#define SOCKTYPE SOCKET
-#define sock_errno (WSAGetLastError())
-
-
-/* check some assumptions */
-#if SOCKET_ERROR >= 0
-#error need SOCKET_ERROR < 0
-#endif
-
 
 /* this should be called before any network operations */
 
@@ -215,62 +139,63 @@ const char * transport_strerror (int n)
   }
 }
 
-#else /* BEGIN UNIX SOCKET SETUP  */
+/* check some assumptions */
+#if SOCKET_ERROR >= 0
+#error need SOCKET_ERROR < 0
+#endif
 
-#define SOCKTYPE int
-#define net_startup() ;
-#define sock_errno errno
-#define transport_strerror strerror
+#endif /* END WINDOWS SOCKET STUFF  */
 
-#endif /* END UNIX SOCKET SETUP */
+
+
 
 /****************************************************************************/
-/* socket reading and writing stuff.
+/* socket reading and writing functions.
  * the socket functions throw exceptions if there are errors, so you must call
  * them from within a TRY block.
  */
 
 /* open a socket */
 
-static void socket_open (Socket *sock)
+static void transport_open (Transport *tpt)
 {
-  sock->fd = socket (PF_INET,SOCK_STREAM,IPPROTO_TCP);
-  if (sock->fd == INVALID_SOCKET) THROW (sock_errno);
+  tpt->fd = socket (PF_INET,SOCK_STREAM,IPPROTO_TCP);
+  if (tpt->fd == INVALID_TRANSPORT) THROW (sock_errno);
 }
 
 /* close a socket */
 
-static void socket_close (Socket *sock)
+static void transport_close (Transport *tpt)
 {
-  if (sock->fd != INVALID_SOCKET) close (sock->fd);
-  sock->fd = INVALID_SOCKET;
+  if (tpt->fd != INVALID_TRANSPORT) close (tpt->fd);
+  tpt->fd = INVALID_TRANSPORT;
 }
 
 
 /* connect the socket to a host */
 
-static void socket_connect (Socket *sock, u32 ip_address, u16 ip_port)
+static void transport_connect (Transport *tpt, u32 ip_address, u16 ip_port)
 {
   struct sockaddr_in myname;
   TRANSPORT_VERIFY_OPEN;
   myname.sin_family = AF_INET;
   myname.sin_port = htons (ip_port);
   myname.sin_addr.s_addr = htonl (ip_address);
-  if (connect (sock->fd, (struct sockaddr *) &myname, sizeof (myname)) != 0)
+  if (connect (tpt->fd, (struct sockaddr *) &myname, sizeof (myname)) != 0)
     THROW (sock_errno);
 }
 
 
 /* bind the socket to a given address/port. the address can be INADDR_ANY. */
 
-static void socket_bind (Socket *sock, u32 ip_address, u16 ip_port)
+static void transport_bind (Transport *tpt, u32 ip_address, u16 ip_port)
 {
   struct sockaddr_in myname;
   TRANSPORT_VERIFY_OPEN;
   myname.sin_family = AF_INET;
   myname.sin_port = htons (ip_port);
   myname.sin_addr.s_addr = htonl (ip_address);
-  if (bind (sock->fd, (struct sockaddr *) &myname, sizeof (myname)) != 0)
+  if (bind (tpt->fd, (struct sockaddr *) &myname, sizeof (myname)) != 0)
     THROW (sock_errno);
 }
 
@@ -279,34 +204,34 @@ static void socket_bind (Socket *sock, u32 ip_address, u16 ip_port)
  * queued up.
  */
 
-static void socket_listen (Socket *sock, int maxcon)
+static void transport_listen (Transport *tpt, int maxcon)
 {
   TRANSPORT_VERIFY_OPEN;
-  if (listen (sock->fd,maxcon) != 0) THROW (sock_errno);
+  if (listen (tpt->fd,maxcon) != 0) THROW (sock_errno);
 }
 
 
 /* accept an incoming connection, initializing `asock' with the new connection.
  */
 
-static void socket_accept (Socket *sock, Socket *asock)
+static void transport_accept (Transport *tpt, Transport *atpt)
 {
   struct sockaddr_in clientname;
   size_t namesize;
   TRANSPORT_VERIFY_OPEN;
   namesize = sizeof (clientname);
-  asock->fd = accept (sock->fd, (struct sockaddr*) &clientname, &namesize);
-  if (asock->fd == INVALID_SOCKET) THROW (sock_errno);
+  atpt->fd = accept (tpt->fd, (struct sockaddr*) &clientname, &namesize);
+  if (atpt->fd == INVALID_TRANSPORT) THROW (sock_errno);
 }
 
 
 /* read from the socket into a buffer */
 
-static void socket_read_buffer (Socket *sock, const u8 *buffer, int length)
+static void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
 {
   TRANSPORT_VERIFY_OPEN;
   while (length > 0) {
-    int n = read (sock->fd,(void*) buffer,length);
+    int n = read (tpt->fd,(void*) buffer,length);
     if (n == 0) THROW (ERR_EOF);
     if (n < 0) THROW (sock_errno);
     buffer += n;
@@ -316,12 +241,54 @@ static void socket_read_buffer (Socket *sock, const u8 *buffer, int length)
 
 /* write a buffer to the socket */
 
-static void socket_write_buffer (Socket *sock, const u8 *buffer, int length)
+static void transport_write_buffer (Transport *tpt, const u8 *buffer, int length)
 {
   int n;
   TRANSPORT_VERIFY_OPEN;
-  n = write (sock->fd,buffer,length);
+  n = write (tpt->fd,buffer,length);
   if (n != length) THROW (sock_errno);
+}
+
+static int transport_open_connection(lua_State *L, Handle *handle)
+{
+	int ip_port;
+  u32 ip_address;
+  struct hostent *host;
+
+  check_num_args (L,2);
+  if (!lua_isstring (L,1))
+    my_lua_error (L,"first argument must be an ip address string");
+  ip_port = get_port_number (L,2);
+
+  host = gethostbyname (lua_tostring (L,1));
+  if (!host) {
+    deal_with_error (L,0,"could not resolve internet address");
+    lua_pushnil (L);
+    return 1;
+  }
+
+  if (host->h_addrtype != AF_INET || host->h_length != 4) {
+    deal_with_error (L,0,"not an internet IPv4 address");
+    lua_pushnil (L);
+    return 1;
+  }
+  ip_address = ntohl ( *((u32*)host->h_addr_list[0]) );
+
+  /* make handle */
+  handle = handle_create(L);
+
+  /* connect the transport to the target server */
+  transport_connect (&handle->tpt,ip_address,(u16) ip_port);
+
+	return 0;
+}
+
+
+static void transport_open_listener(Transport *tpt, int port)
+{
+	transport_open (tpt);
+  transport_bind (tpt,INADDR_ANY,(u16) port);
+  transport_listen (tpt,MAXCON);
 }
 
 /* see if there is any data to read from a socket, without actually reading
@@ -329,17 +296,17 @@ static void socket_write_buffer (Socket *sock, const u8 *buffer, int length)
  * socket this returns 1 if a connection is available or 0 if not.
  */
 
-static int socket_readable (Socket *sock)
+static int transport_readable (Transport *tpt)
 {
   fd_set set;
   struct timeval tv;
   int ret;
-  if (sock->fd == INVALID_SOCKET) return 0;
+  if (tpt->fd == INVALID_TRANSPORT) return 0;
   FD_ZERO (&set);
-  FD_SET (sock->fd,&set);
+  FD_SET (tpt->fd,&set);
   tv.tv_sec = 0;
   tv.tv_usec = 0;
-  ret = select (sock->fd + 1,&set,0,0,&tv);
+  ret = select (tpt->fd + 1,&set,0,0,&tv);
   return (ret > 0);
 }
  

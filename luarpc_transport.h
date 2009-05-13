@@ -1,19 +1,4 @@
-/* Represent doubles as byte string */
-union DoubleBytes {
-  double d;
-  u8 b[8];
-};
 
-/* Transport Connection Structure */
-struct _Transport {
-  SOCKTYPE fd;      /* INVALID_TRANSPORT if socket is closed */
-};
-typedef struct _Transport Transport;
-
-#define INVALID_TRANSPORT (-1)
-
-#define TRANSPORT_VERIFY_OPEN \
-  if (tpt->fd == INVALID_TRANSPORT) THROW (ERR_CLOSED);
 
 static void transport_open (Transport *tpt);
 

@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <setjmp.h>
+#include <string.h>
 
 #include "lua.h"
 #include "lualib.h"
@@ -16,7 +17,7 @@
 
 #include "config.h"
 #include "luarpc_rpc.h"
-
+#include "luarpc_socket.h"
 
 
 static void errorMessage (const char *msg, va_list ap)
@@ -90,7 +91,121 @@ static void exception_throw (int n)
   longjmp (exception_stack[exception_num_trys],1);
 }
 
+/****************************************************************************/
+/* transport layer generics */
 
+/* initialize a transport struct */
+
+static void transport_init (Transport *tpt)
+{
+  tpt->fd = INVALID_TRANSPORT;
+}
+
+/* see if a socket is open */
+
+static int transport_is_open (Transport *tpt)
+{
+  return (tpt->fd != INVALID_TRANSPORT);
+}
+
+
+/* read from the transport into a string buffer. */
+
+static void transport_read_string (Transport *tpt, const char *buffer, int length)
+{
+  transport_read_buffer (tpt,(u8*) buffer,length);
+}
+
+
+/* write a string buffer to the transport */
+
+static void transport_write_string (Transport *tpt, const char *buffer, int length)
+{
+  transport_write_buffer (tpt,(u8*) buffer,length);
+}
+
+
+/* read a u8 from the transport */
+
+static u8 transport_read_u8 (Transport *tpt)
+{
+  u8 b;
+  TRANSPORT_VERIFY_OPEN;
+  transport_read_buffer (tpt,&b,1);
+  return b;
+}
+
+
+/* write a u8 to the transport */
+
+static void transport_write_u8 (Transport *tpt, u8 x)
+{
+  int n;
+	u8 b;
+  TRANSPORT_VERIFY_OPEN;
+  n = write (tpt->fd,&x,1);
+	transport_write_buffer (tpt,&b,1);
+  /* FIXME: if (n != 1) THROW (tpt_errno); */
+}
+
+
+/* read a u32 from the transport */
+
+static u32 transport_read_u32 (Transport *tpt)
+{
+  u8 b[4];
+  u32 i;
+  TRANSPORT_VERIFY_OPEN;
+  transport_read_buffer (tpt,b,4);
+  i = (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
+  return i;
+}
+
+
+/* write a u32 to the transport */
+
+static void transport_write_u32 (Transport *tpt, u32 x)
+{
+  u8 b[4];
+  int n;
+  TRANSPORT_VERIFY_OPEN;
+  b[0] = x >> 24;
+  b[1] = x >> 16;
+  b[2] = x >> 8;
+  b[3] = x;
+	transport_write_buffer (tpt,b,4);
+}
+
+
+/* Represent doubles as byte string */
+union DoubleBytes {
+  double d;
+  u8 b[8];
+};
+
+/* read a double from the transport */
+
+static double transport_read_double (Transport *tpt)
+{
+  union DoubleBytes double_bytes;
+  TRANSPORT_VERIFY_OPEN;
+  /* @@@ handle endianness */
+  transport_read_buffer (tpt,double_bytes.b,8);
+  return double_bytes.d;
+}
+
+
+/* write a double to the transport */
+
+static void transport_write_double (Transport *tpt, double x)
+{
+  int n;
+  union DoubleBytes double_bytes;
+  TRANSPORT_VERIFY_OPEN;
+  /* @@@ handle endianness */
+  double_bytes.d = x;
+	transport_read_buffer (tpt,double_bytes.b,8);
+}
 
 
 
@@ -174,6 +289,9 @@ enum { RPC_PROTOCOL_VERSION = 3 };
 /* write a table at the given index in the stack. the index must be absolute
  * (i.e. positive).
  */
+
+static void write_variable (Transport *tpt, lua_State *L, int var_index);
+static int read_variable (Transport *tpt, lua_State *L);
 
 static void write_table (Transport *tpt, lua_State *L, int table_index)
 {
@@ -599,38 +717,10 @@ static int RPC_open (lua_State *L)
   
   exception_init();
   TRY {
-    int ip_port;
-    u32 ip_address;
-    struct hostent *host;
-    char header[5];
-
-    check_num_args (L,2);
-    if (!lua_isstring (L,1))
-      my_lua_error (L,"first argument must be an ip address string");
-    ip_port = get_port_number (L,2);
-
-    host = gethostbyname (lua_tostring (L,1));
-    if (!host) {
-      deal_with_error (L,0,"could not resolve internet address");
-      lua_pushnil (L);
-      ENDTRY;
-      return 1;
-    }
-
-    if (host->h_addrtype != AF_INET || host->h_length != 4) {
-      deal_with_error (L,0,"not an internet IPv4 address");
-      lua_pushnil (L);
-      ENDTRY;
-      return 1;
-    }
-    ip_address = ntohl ( *((u32*)host->h_addr_list[0]) );
-
-    /* make handle */
-    handle = handle_create(L);
-
-    /* connect the transport to the target server */
-    transport_connect (&handle->tpt,ip_address,(u16) ip_port);
-
+		char header[5];
+		
+		transport_open_connection(L, handle);
+    
     /* write the protocol header */
     header[0] = 'L';
     header[1] = 'R';
@@ -807,11 +897,10 @@ static ServerHandle *RPC_listen_helper (lua_State *L)
     handle = server_handle_create(L);
 
     /* make listening transport */
+
 		/* FIXME: _SOCKET_ setup */
-    transport_open (&handle->ltpt);
-    transport_bind (&handle->ltpt,INADDR_ANY,(u16) port);
-    transport_listen (&handle->ltpt,MAXCON);
-    
+		transport_open_listener(&handle->ltpt, port)
+
     ENDTRY;
     return handle;
   }

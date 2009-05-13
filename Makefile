@@ -36,8 +36,8 @@ rpctest: rpctest.c luarpc.o
 luarpc.o: luarpc.c luarpc.h
 	$(CC) -c $(CFLAGS) -I$(LUAINC) luarpc.c
 
-module: luarpc.c
-	$(LIBTOOL) --mode=compile cc -c luarpc.c
+module: luarpc.c luarpc_socket.c
+	$(LIBTOOL) --mode=compile cc -c luarpc.c luarpc_socket.c
 	$(LIBTOOL) --mode=link cc -rpath $(LUALIB) -o libluarpc.la luarpc.lo
 	mv .libs/libluarpc.0.dylib luarpc.so
 
