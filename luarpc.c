@@ -83,7 +83,7 @@ static void exception_init()
 
 /* throw an exception. this will jump to the most recent CATCH block. */
 
-static void exception_throw (int n)
+void exception_throw (int n)
 {
   MYASSERT (exception_num_trys > 0);
   exception_errnum = n;
@@ -228,7 +228,7 @@ void my_lua_error (lua_State *L, const char *errmsg)
 
 /* check that a given stack value is a port number, and return its value. */
 
-static int get_port_number (lua_State *L, int i)
+int get_port_number (lua_State *L, int i)
 {
   double port_d;
   int port;
@@ -242,7 +242,7 @@ static int get_port_number (lua_State *L, int i)
 }
 
 
-static int check_num_args (lua_State *L, int desired_n)
+int check_num_args (lua_State *L, int desired_n)
 {
   int n = lua_gettop (L);   /* number of arguments on stack */
   if (n != desired_n) {
@@ -479,7 +479,7 @@ static int global_error_handler = LUA_NOREF;  /* function reference */
  * return. the handle `h' may be 0.
  */
 
-static void deal_with_error (lua_State *L, Handle *h, const char *error_string)
+void deal_with_error (lua_State *L, Handle *h, const char *error_string)
 { 
   if (global_error_handler !=  LUA_NOREF) {
     lua_getref (L,global_error_handler);
@@ -492,7 +492,7 @@ static void deal_with_error (lua_State *L, Handle *h, const char *error_string)
 }
 
 
-static Handle * handle_create (lua_State *L)
+Handle * handle_create (lua_State *L)
 {
   Handle *h = (Handle *)lua_newuserdata(L, sizeof(Handle));
   luaL_getmetatable(L, "rpc.handle");
@@ -899,7 +899,7 @@ static ServerHandle *RPC_listen_helper (lua_State *L)
     /* make listening transport */
 
 		/* FIXME: _SOCKET_ setup */
-		transport_open_listener(&handle->ltpt, port)
+		transport_open_listener(&handle->ltpt, port);
 
     ENDTRY;
     return handle;

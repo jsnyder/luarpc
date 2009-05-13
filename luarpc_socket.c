@@ -157,7 +157,7 @@ const char * transport_strerror (int n)
 
 /* open a socket */
 
-static void transport_open (Transport *tpt)
+void transport_open (Transport *tpt)
 {
   tpt->fd = socket (PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (tpt->fd == INVALID_TRANSPORT) THROW (sock_errno);
@@ -165,7 +165,7 @@ static void transport_open (Transport *tpt)
 
 /* close a socket */
 
-static void transport_close (Transport *tpt)
+void transport_close (Transport *tpt)
 {
   if (tpt->fd != INVALID_TRANSPORT) close (tpt->fd);
   tpt->fd = INVALID_TRANSPORT;
@@ -214,7 +214,7 @@ static void transport_listen (Transport *tpt, int maxcon)
 /* accept an incoming connection, initializing `asock' with the new connection.
  */
 
-static void transport_accept (Transport *tpt, Transport *atpt)
+void transport_accept (Transport *tpt, Transport *atpt)
 {
   struct sockaddr_in clientname;
   size_t namesize;
@@ -227,7 +227,7 @@ static void transport_accept (Transport *tpt, Transport *atpt)
 
 /* read from the socket into a buffer */
 
-static void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
+void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
 {
   TRANSPORT_VERIFY_OPEN;
   while (length > 0) {
@@ -241,7 +241,7 @@ static void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
 
 /* write a buffer to the socket */
 
-static void transport_write_buffer (Transport *tpt, const u8 *buffer, int length)
+void transport_write_buffer (Transport *tpt, const u8 *buffer, int length)
 {
   int n;
   TRANSPORT_VERIFY_OPEN;
@@ -249,7 +249,7 @@ static void transport_write_buffer (Transport *tpt, const u8 *buffer, int length
   if (n != length) THROW (sock_errno);
 }
 
-static int transport_open_connection(lua_State *L, Handle *handle)
+int transport_open_connection(lua_State *L, Handle *handle)
 {
 	int ip_port;
   u32 ip_address;
@@ -284,7 +284,7 @@ static int transport_open_connection(lua_State *L, Handle *handle)
 }
 
 
-static void transport_open_listener(Transport *tpt, int port)
+void transport_open_listener(Transport *tpt, int port)
 {
 	transport_open (tpt);
   transport_bind (tpt,INADDR_ANY,(u16) port);
@@ -296,7 +296,7 @@ static void transport_open_listener(Transport *tpt, int port)
  * socket this returns 1 if a connection is available or 0 if not.
  */
 
-static int transport_readable (Transport *tpt)
+int transport_readable (Transport *tpt)
 {
   fd_set set;
   struct timeval tv;
