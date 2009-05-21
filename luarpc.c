@@ -702,12 +702,12 @@ static void server_handle_destroy (ServerHandle *h)
 /****************************************************************************/
 /* remote function calling (client side) */
 
-/* RPC_open (ip_address, port)
+/* rpc_open_tcp (ip_address, port)
  *     returns a handle to the new connection, or nil if there was an error.
  *     if there is an RPC error function defined, it will be called on error.
  */
 
-static int RPC_open (lua_State *L)
+static int rpc_open_tcp (lua_State *L)
 {
   Handle *handle=0;
   
@@ -737,14 +737,14 @@ static int RPC_open (lua_State *L)
 }
 
 
-/* RPC_close (handle)
+/* rpc_close (handle)
  *     this closes the transport, but does not free the handle object. that's
  *     because the handle will still be in the user's name space and might be
  *     referred to again. we'll let garbage collection free the object.
  *     it's a lua runtime error to refer to a transport after it has been closed.
  */
 
-static int RPC_close (lua_State *L)
+static int rpc_close (lua_State *L)
 {
   check_num_args (L,1);
 
@@ -767,12 +767,12 @@ static int RPC_close (lua_State *L)
 
 
 
-/* RPC_async (handle,)
+/* rpc_async (handle,)
  *     this sets a handle's asynchronous calling mode (0/nil=off, other=on).
  *     (this is for the client only).
  */
 
-static int RPC_async (lua_State *L)
+static int rpc_async (lua_State *L)
 {
   Handle *handle;
   check_num_args (L,2);
@@ -878,7 +878,7 @@ static void read_function_call (Transport *tpt, lua_State *L)
 }
 
 
-static ServerHandle *RPC_listen_helper (lua_State *L)
+static ServerHandle *rpc_listen_helper (lua_State *L)
 {
   ServerHandle *handle = 0;
   exception_init();
@@ -908,19 +908,19 @@ static ServerHandle *RPC_listen_helper (lua_State *L)
 }
 
 
-/* RPC_listen (port) --> server_handle */
+/* rpc_listen (port) --> server_handle */
 
-static int RPC_listen (lua_State *L)
+static int rpc_listen (lua_State *L)
 {
   ServerHandle *handle;
-  handle = RPC_listen_helper (L);
+  handle = rpc_listen_helper (L);
   return 1;
 }
 
 
-/* RPC_peek (server_handle) --> 0 or 1 */
+/* rpc_peek (server_handle) --> 0 or 1 */
 
-static int RPC_peek (lua_State *L)
+static int rpc_peek (lua_State *L)
 {
   ServerHandle *handle;
   check_num_args (L,1);
@@ -948,7 +948,7 @@ static int RPC_peek (lua_State *L)
 }
 
 
-static void RPC_dispatch_helper (lua_State *L, ServerHandle *handle)
+static void rpc_dispatch_helper (lua_State *L, ServerHandle *handle)
 {
   exception_init();
   TRY {
@@ -996,9 +996,9 @@ static void RPC_dispatch_helper (lua_State *L, ServerHandle *handle)
 }
 
 
-/* RPC_dispatch (server_handle) */
+/* rpc_dispatch (server_handle) */
 
-static int RPC_dispatch (lua_State *L)
+static int rpc_dispatch (lua_State *L)
 {
   ServerHandle *handle;
   check_num_args (L,1);
@@ -1006,18 +1006,18 @@ static int RPC_dispatch (lua_State *L)
     my_lua_error (L,"argument must be an RPC server handle");
   handle = (ServerHandle*) lua_touserdata (L,1);
 
-  RPC_dispatch_helper (L,handle);
+  rpc_dispatch_helper (L,handle);
   return 0;
 }
 
 
 /* lrf_server (port) */
 
-static int RPC_server (lua_State *L)
+static int rpc_server (lua_State *L)
 {
-  ServerHandle *handle = RPC_listen_helper (L);
+  ServerHandle *handle = rpc_listen_helper (L);
   while (transport_is_open (&handle->ltpt)) {
-    RPC_dispatch_helper (L,handle);
+    rpc_dispatch_helper (L,handle);
   }
   server_handle_destroy (handle);
   return 0;
@@ -1037,10 +1037,10 @@ static int server_handle_gc (lua_State *L)
 /****************************************************************************/
 /* more error handling stuff */
 
-/* RPC_on_error ([handle,] error_handler)
+/* rpc_on_error ([handle,] error_handler)
  */
 
-static int RPC_on_error (lua_State *L)
+static int rpc_on_error (lua_State *L)
 {
   check_num_args (L,1);
 
@@ -1097,14 +1097,16 @@ LUALIB_API int luaopen_luarpc(lua_State *L)
   started = 1;
 
   net_startup();
-  lua_register (L,"RPC_open",RPC_open);
-  lua_register (L,"RPC_close",RPC_close);
-  lua_register (L,"RPC_server",RPC_server);
-  lua_register (L,"RPC_on_error",RPC_on_error);
-  lua_register (L,"RPC_listen",RPC_listen);
-  lua_register (L,"RPC_peek",RPC_peek);
-  lua_register (L,"RPC_dispatch",RPC_dispatch);
-  lua_register (L,"RPC_async",RPC_async);
+#ifdef LUARPC_ENABLE_SOCKET
+  lua_register (L,"rpc_open_tcp",rpc_open_tcp);
+#endif
+  lua_register (L,"rpc_close",rpc_close);
+  lua_register (L,"rpc_server",rpc_server);
+  lua_register (L,"rpc_on_error",rpc_on_error);
+  lua_register (L,"rpc_listen",rpc_listen);
+  lua_register (L,"rpc_peek",rpc_peek);
+  lua_register (L,"rpc_dispatch",rpc_dispatch);
+  lua_register (L,"rpc_async",rpc_async);
 
   luaL_newmetatable(L, "rpc.helper");
   luaL_openlib(L,NULL,rpc_helper,0);
