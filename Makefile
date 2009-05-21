@@ -37,8 +37,8 @@ luarpc.o: luarpc.c luarpc.h
 	$(CC) -c $(CFLAGS) -I$(LUAINC) luarpc.c
 
 module: luarpc.c luarpc_socket.c
-	$(LIBTOOL) --mode=compile cc -c luarpc.c
-	$(LIBTOOL) --mode=compile cc -c luarpc_socket.c
+	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc.c
+	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc_socket.c
 	$(LIBTOOL) --mode=link cc -rpath $(LUALIB) -o libluarpc.la luarpc.lo luarpc_socket.lo
 	mv .libs/libluarpc.0.dylib luarpc.so
 

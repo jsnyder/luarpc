@@ -141,11 +141,8 @@ static u8 transport_read_u8 (Transport *tpt)
 static void transport_write_u8 (Transport *tpt, u8 x)
 {
   int n;
-	u8 b;
   TRANSPORT_VERIFY_OPEN;
-  n = write (tpt->fd,&x,1);
-	transport_write_buffer (tpt,&b,1);
-  /* FIXME: if (n != 1) THROW (tpt_errno); */
+	transport_write_buffer (tpt,&x,1);
 }
 
 
@@ -204,7 +201,7 @@ static void transport_write_double (Transport *tpt, double x)
   TRANSPORT_VERIFY_OPEN;
   /* @@@ handle endianness */
   double_bytes.d = x;
-	transport_read_buffer (tpt,double_bytes.b,8);
+	transport_write_buffer (tpt,double_bytes.b,8);
 }
 
 
@@ -281,7 +278,7 @@ enum {
   RPC_TABLE,
   RPC_TABLE_END,
   RPC_FUNCTION,
-  RPC_FUNCTION_END,
+  RPC_FUNCTION_END
 };
 
 enum { RPC_PROTOCOL_VERSION = 3 };
@@ -647,7 +644,6 @@ static int helper_function (lua_State *L)
       transport_read_string (tpt,err_string,len);
       err_string[len] = 0;
       ENDTRY;
-      /* WTF: we're getting no error here!!! */
       deal_with_error (L,h->handle,err_string);
       return 0;
     }
@@ -719,7 +715,7 @@ static int RPC_open (lua_State *L)
   TRY {
 		char header[5];
 		
-		transport_open_connection(L, handle);
+		handle = transport_open_connection(L, handle);
     
     /* write the protocol header */
     header[0] = 'L';

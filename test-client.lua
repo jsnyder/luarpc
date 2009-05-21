@@ -15,12 +15,15 @@ tab = {a=1.4142, b=2};
 function doStuff()
 	-- set the default error handler for all handles
 	RPC_on_error (error_handler);
+	io.write ("error set\n")
 
 	local slave,err = RPC_open ("localhost",12345);
 	if not slave then
 		io.write ("error: " .. err .. "\n");
 		exit();
 	end
+
+	io.write ("connected\n")
 
 	-- set the error handler for a specific handle
 	--RPC_on_error (slave,error_handler);

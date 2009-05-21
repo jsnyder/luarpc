@@ -249,7 +249,7 @@ void transport_write_buffer (Transport *tpt, const u8 *buffer, int length)
   if (n != length) THROW (sock_errno);
 }
 
-int transport_open_connection(lua_State *L, Handle *handle)
+Handle * transport_open_connection(lua_State *L, Handle *handle)
 {
 	int ip_port;
   u32 ip_address;
@@ -280,7 +280,7 @@ int transport_open_connection(lua_State *L, Handle *handle)
   /* connect the transport to the target server */
   transport_connect (&handle->tpt,ip_address,(u16) ip_port);
 
-	return 0;
+	return handle;
 }
 
 
