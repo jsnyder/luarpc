@@ -8,8 +8,8 @@
 # the path to lua
 #LUA=/the/path/to/lua
 #LUA=/home/russ/1/proj/ntest/ntest
-LUA=/Users/jsnyder/Sources/lua-5.1.4
-LUAINC=$(LUA)/include
+LUA=/usr/include/lua5.1/
+LUAINC=/usr/include/lua5.1/
 LUALIB=$(LUA)/lib
 
 LIBTOOL=libtool --tag=CC --silent
@@ -37,9 +37,9 @@ luarpc.o: luarpc.c luarpc.h
 	$(CC) -c $(CFLAGS) -I$(LUAINC) luarpc.c
 
 module: luarpc.c
-	$(LIBTOOL) --mode=compile cc -c luarpc.c
+	$(LIBTOOL) --mode=compile cc -I$(LUAINC) -c luarpc.c
 	$(LIBTOOL) --mode=link cc -rpath $(LUALIB) -o libluarpc.la luarpc.lo
-	mv .libs/libluarpc.0.dylib luarpc.so
+	(mv .libs/libluarpc.so.0.0.0 luarpc.so || mv .libs/libluarpc.0.dylib luarpc.so)
 
 clean-unix:
 	-rm -f *~ *.o *.obj a.out rpctest rpctest.exe core
