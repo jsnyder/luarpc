@@ -8,10 +8,12 @@
 # the path to lua
 #LUA=/the/path/to/lua
 #LUA=/home/russ/1/proj/ntest/ntest
-LUA=/Users/jsnyder/Sources/lua-5.1.4
-LUAINC=$(LUA)/include
-LUALIB=$(LUA)/lib
+#LUA=/Users/jsnyder/Sources/lua-5.1.4
+#LUAINC=$(LUA)/include
+#LUALIB=$(LUA)/lib
 
+LUA=/usr/include/lua5.1/
+LUAINC=/usr/include/lua5.1/
 LIBTOOL=libtool --tag=CC --silent
 
 # compiler, arguments and libs for GCC under unix
