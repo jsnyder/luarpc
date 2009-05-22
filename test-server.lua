@@ -32,17 +32,17 @@ testvar = 23
 
 io.write ("server started\n")
 
-RPC_server (12345);
+rpc_server (12345);
 
 
 -- an alternative way
 
 --count = 0;
---handle = RPC_listen (12345);
+--handle = rpc_listen (12345);
 --while 1 do
---	if RPC_peek (handle) then
+--	if rpc_peek (handle) then
 --		io.write ("dispatch\n")
---		RPC_dispatch (handle)
+--		rpc_dispatch (handle)
 --	else
 --		io.write ("do dee do " .. count .. "...\n")
 --	end

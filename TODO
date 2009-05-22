@@ -1,7 +1,7 @@
 TODO
 ----
 
-RPC_on_error (HANDLE, func)   <-- add option for handle 
+rpc_on_error (HANDLE, func)   <-- add option for handle 
 
 pass user data to a remote function (or as return values)? the write()
 function apparently needs this
@@ -87,7 +87,7 @@ make it C not C++
 FIXUP socket exception handling - use setjmp/longjmp stack?
 
 error handling
-	* propagate remote script errors to client --> RPC_on_error()
+	* propagate remote script errors to client --> rpc_on_error()
 	* runtime instead of fatal errors in many places (e.g. socket stuff).
 	  BUT make sure we always tidy up open sockets, memory etc on
 	  exceptions.
@@ -115,23 +115,23 @@ call:
 
 --
 
-handle = RPC_listen (12345)
+handle = rpc_listen (12345)
 
 while 1 do
-	if RPC_peek (handle) then
-		RPC_dispatch (handle)
+	if rpc_peek (handle) then
+		rpc_dispatch (handle)
 	else
 		write ("doo de doo...\n")
 	end
 end
 
-RPC_close (handle)		-- works for clients *and* servers
+rpc_close (handle)		-- works for clients *and* servers
 
 
-function RPC_server (port)
-	RPC_listen (port);
+function rpc_server (port)
+	rpc_listen (port);
 	while 1 do
-		RPC_dispatch()
+		rpc_dispatch()
 	end
 end
 
