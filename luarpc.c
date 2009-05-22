@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include <setjmp.h>
 #include <string.h>
+#include <alloca.h>
 
 #include "lua.h"
 #include "lualib.h"
