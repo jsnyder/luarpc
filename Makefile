@@ -14,6 +14,7 @@
 
 LUAINC=/usr/include/lua5.1/
 LUALIB=/usr/lib
+
 LIBTOOL=libtool --tag=CC --quiet
 
 # compiler, arguments and libs for GCC under unix
@@ -33,7 +34,7 @@ module: luarpc.c luarpc_socket.c
 	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc.c
 	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc_socket.c
 	$(LIBTOOL) --mode=link cc -module -rpath $(LUALIB) -o libluarpc.la luarpc.lo luarpc_socket.lo
-	(mv .libs/libluarpc.so.0.0.0 luarpc.so || mv .libs/libluarpc.0.dylib luarpc.so)
+	(mv .libs/libluarpc.so.0.0.0 luarpc.so || mv .libs/libluarpc.0.so luarpc.so)
 
 clean-unix:
 	-rm -f *~ *.o *.obj a.out rpctest rpctest.exe core
