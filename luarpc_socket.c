@@ -249,13 +249,13 @@ void transport_write_buffer (Transport *tpt, const u8 *buffer, int length)
   if (n != length) THROW (sock_errno);
 }
 
-Handle * transport_open_connection(lua_State *L, Handle *handle)
+int transport_open_connection(lua_State *L, Handle *handle)
 {
 	int ip_port;
   u32 ip_address;
   struct hostent *host;
 
-  check_num_args (L,2);
+  check_num_args (L,3); /* Last arg is handle.. */
   if (!lua_isstring (L,1))
     my_lua_error (L,"first argument must be an ip address string");
   ip_port = get_port_number (L,2);
@@ -274,13 +274,12 @@ Handle * transport_open_connection(lua_State *L, Handle *handle)
   }
   ip_address = ntohl ( *((u32*)host->h_addr_list[0]) );
 
-  /* make handle */
-  handle = handle_create(L);
+  transport_open (&handle->tpt);
 
   /* connect the transport to the target server */
   transport_connect (&handle->tpt,ip_address,(u16) ip_port);
 
-	return handle;
+	return 1;
 }
 
 

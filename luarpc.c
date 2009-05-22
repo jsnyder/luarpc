@@ -495,7 +495,6 @@ Handle * handle_create (lua_State *L)
   luaL_getmetatable(L, "rpc.handle");
   lua_setmetatable(L, -2);
   h->refcount = 1;
-  transport_open (&h->tpt);
   h->error_handler = LUA_NOREF;
   h->async = 0;
   h->read_reply_count = 0;
@@ -714,8 +713,8 @@ static int rpc_open_tcp (lua_State *L)
   exception_init();
   TRY {
 		char header[5];
-		
-		handle = transport_open_connection(L, handle);
+	  handle = handle_create(L);
+		transport_open_connection(L, handle);
     
     /* write the protocol header */
     header[0] = 'L';
@@ -893,8 +892,6 @@ static ServerHandle *rpc_listen_helper (lua_State *L)
     handle = server_handle_create(L);
 
     /* make listening transport */
-
-		/* FIXME: _SOCKET_ setup */
 		transport_open_listener(&handle->ltpt, port);
 
     ENDTRY;
@@ -1015,7 +1012,7 @@ static int rpc_dispatch (lua_State *L)
 
 static int rpc_server (lua_State *L)
 {
-  ServerHandle *handle = rpc_listen_helper (L);
+  ServerHandle *handle = rpc_listen_helper (L);\
   while (transport_is_open (&handle->ltpt)) {
     rpc_dispatch_helper (L,handle);
   }
