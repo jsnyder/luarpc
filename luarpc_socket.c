@@ -147,8 +147,6 @@ const char * transport_strerror (int n)
 #endif /* END WINDOWS SOCKET STUFF  */
 
 
-
-
 /****************************************************************************/
 /* socket reading and writing functions.
  * the socket functions throw exceptions if there are errors, so you must call
