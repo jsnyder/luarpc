@@ -897,16 +897,11 @@ static ServerHandle *rpc_listen_helper (lua_State *L)
 
   TRY
 	{
-    int port;
-
-    check_num_args (L,1);
-    port = get_port_number (L,1);
-
     /* make server handle */
     handle = server_handle_create(L);
 
     /* make listening transport */
-    transport_open_listener(&handle->ltpt, port);
+    transport_open_listener(L, handle);
 
     ENDTRY;
     return handle;

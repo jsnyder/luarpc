@@ -158,7 +158,7 @@ int get_port_number (lua_State *L, int i);
 void transport_init (Transport *tpt);
 
 /* Open Listener / Server */
-void transport_open_listener(Transport *tpt, int port);
+void transport_open_listener(lua_State *L, ServerHandle *handle);
 
 /* Open Connection / Client */
 int transport_open_connection(lua_State *L, Handle *handle);

@@ -296,11 +296,16 @@ int transport_open_connection(lua_State *L, Handle *handle)
 }
 
 
-void transport_open_listener(Transport *tpt, int port)
+void transport_open_listener(lua_State *L, ServerHandle *handle)
 {
-	transport_open (tpt);
-  transport_bind (tpt,INADDR_ANY,(u16) port);
-  transport_listen (tpt,MAXCON);
+	int port;
+
+  check_num_args (L,2);
+  port = get_port_number (L,1);
+
+	transport_open (&handle->ltpt);
+  transport_bind (&handle->ltpt,INADDR_ANY,(u16) port);
+  transport_listen (&handle->ltpt,MAXCON);
 }
 
 /* see if there is any data to read from a socket, without actually reading
