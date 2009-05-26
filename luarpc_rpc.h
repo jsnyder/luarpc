@@ -111,7 +111,13 @@ enum {
 
 /* Transport Connection Structure */
 struct _Transport {
+#ifdef LUARPC_ENABLE_SOCKET
   SOCKTYPE fd;      /* INVALID_TRANSPORT if socket is closed */
+#endif
+
+#ifdef LUARPC_ENABLE_FIFO
+	int wrfd, rdfd;
+#endif
 };
 typedef struct _Transport Transport;
 
@@ -150,7 +156,6 @@ Handle * handle_create (lua_State *L);
 int check_num_args (lua_State *L, int desired_n);
 void deal_with_error (lua_State *L, Handle *h, const char *error_string);
 void exception_throw (int n);
-int get_port_number (lua_State *L, int i);
 
 /* TRANSPORT API */
 

@@ -10,11 +10,12 @@
 /* Setup Transport */
 void transport_init (Transport *tpt)
 {
-	
+	tpt->wrfd = INVALID_TRANSPORT;
+	tpt->rdfd = INVALID_TRANSPORT;
 }
 
 /* Open Listener / Server */
-void transport_open_listener(Transport *tpt, int port)
+void transport_open_listener(lua_State *L, ServerHandle *handle)
 {
 	
 }

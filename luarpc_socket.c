@@ -146,6 +146,25 @@ const char * transport_strerror (int n)
 
 #endif /* END WINDOWS SOCKET STUFF  */
 
+/* check that a given stack value is a port number, and return its value. */
+
+static int get_port_number (lua_State *L, int i)
+{
+  double port_d;
+  int port;
+  if (!lua_isnumber (L,i)) my_lua_error (L,"port number argument is bad");
+
+  port_d = lua_tonumber (L,i);
+  
+	if (port_d < 0 || port_d > 0xffff)
+    my_lua_error (L,"port number must be in the range 0..65535");
+  
+	port = (int) port_d;
+  if (port_d != port)
+		my_lua_error (L,"port number must be an integer");
+  
+	return port;
+}
 
 /****************************************************************************/
 /* socket reading and writing functions.
@@ -300,7 +319,7 @@ void transport_open_listener(lua_State *L, ServerHandle *handle)
 {
 	int port;
 
-  check_num_args (L,2);
+  check_num_args (L,2); /* 2nd arg is server handle */
   port = get_port_number (L,1);
 
 	transport_open (&handle->ltpt);
