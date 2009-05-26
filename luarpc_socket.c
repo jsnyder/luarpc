@@ -35,10 +35,10 @@
 #include "lualib.h"
 #include "lauxlib.h"
 
+#include "config.h"
 #include "luarpc_rpc.h"
 
-#include "config.h"
-
+#ifdef LUARPC_ENABLE_SOCKET
 
 /****************************************************************************/
 /* handle the differences between winsock and unix */
@@ -154,6 +154,21 @@ const char * transport_strerror (int n)
  * the socket functions throw exceptions if there are errors, so you must call
  * them from within a TRY block.
  */
+
+
+/* Initializer / Constructor for Transport */
+
+void transport_init (Transport *tpt)
+{
+  tpt->fd = INVALID_TRANSPORT;
+}
+
+/* see if a socket is open */
+
+int transport_is_open (Transport *tpt)
+{
+  return (tpt->fd != INVALID_TRANSPORT);
+}
 
 /* open a socket */
 
@@ -308,4 +323,5 @@ int transport_readable (Transport *tpt)
   ret = select (tpt->fd + 1,&set,0,0,&tv);
   return (ret > 0);
 }
- 
+
+#endif /* LUARPC_ENABLE_SOCKET */

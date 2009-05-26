@@ -97,18 +97,6 @@ void exception_throw (int n)
 
 /* initialize a transport struct */
 
-static void transport_init (Transport *tpt)
-{
-  tpt->fd = INVALID_TRANSPORT;
-}
-
-/* see if a socket is open */
-
-static int transport_is_open (Transport *tpt)
-{
-  return (tpt->fd != INVALID_TRANSPORT);
-}
-
 
 /* read from the transport into a string buffer. */
 
@@ -680,6 +668,7 @@ static ServerHandle * server_handle_create(lua_State *L)
   ServerHandle *h = (ServerHandle *)lua_newuserdata(L, sizeof(ServerHandle));
   luaL_getmetatable(L, "rpc.server_handle");
   lua_setmetatable(L, -2);
+
   transport_init (&h->ltpt);
   transport_init (&h->atpt);
   return h;
