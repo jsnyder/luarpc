@@ -35,7 +35,7 @@ function doStuff()
 	-- slave.foo3();
 
 	ret = slave.foo1 (123,3.14159,"hello");
-	io.write ("return value = " .. ret .. "\n");
+	-- io.write ("return value = " .. ret .. "\n");
 
 	-- slave.exit (0);		-- trigger socket error at next call
 

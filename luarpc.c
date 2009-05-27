@@ -955,7 +955,7 @@ static void rpc_dispatch_helper (lua_State *L, ServerHandle *handle)
       TRY
 			{
 				/* Wait for available data */
-				while ( transport_readable (&handle->atpt) == 0 );
+				while ( transport_readable ( &handle->atpt ) == 0 );
   			read_function_call (&handle->atpt,L);
   			ENDTRY;
       }
