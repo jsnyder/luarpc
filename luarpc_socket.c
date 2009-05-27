@@ -192,7 +192,8 @@ int transport_is_open (Transport *tpt)
 void transport_open (Transport *tpt)
 {
   tpt->fd = socket (PF_INET,SOCK_STREAM,IPPROTO_TCP);
-  if (tpt->fd == INVALID_TRANSPORT) THROW (sock_errno);
+  if (tpt->fd == INVALID_TRANSPORT) 
+		THROW (sock_errno);
 }
 
 /* close a socket */
@@ -337,12 +338,18 @@ int transport_readable (Transport *tpt)
   fd_set set;
   struct timeval tv;
   int ret;
-  if (tpt->fd == INVALID_TRANSPORT) return 0;
-  FD_ZERO (&set);
+
+  if (tpt->fd == INVALID_TRANSPORT)
+		return 0;
+	
+	FD_ZERO (&readfs);
   FD_SET (tpt->fd,&set);
+
   tv.tv_sec = 0;
   tv.tv_usec = 0;
-  ret = select (tpt->fd + 1,&set,0,0,&tv);
+
+  ret = select ( tpt->fd + 1, &set, 0, 0, &tv );
+
   return (ret > 0);
 }
 

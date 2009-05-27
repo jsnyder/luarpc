@@ -17,7 +17,8 @@ function doStuff()
 	rpc_on_error (error_handler);
 	io.write ("error set\n")
 
-	local slave,err = rpc_open_tcp ("localhost",12345);
+	-- local slave,err = rpc_connect ("localhost",12345);
+	local slave,err = rpc_connect ("/dev/ttys0");
 	if not slave then
 		io.write ("error: " .. err .. "\n");
 		exit();
@@ -29,9 +30,9 @@ function doStuff()
 	--rpc_on_error (slave,error_handler);
 
 	-- trigger some errors
-	slave.a_bad_function (1,2,3,4,5);
+	-- slave.a_bad_function (1,2,3,4,5);
 
-	slave.foo3();
+	-- slave.foo3();
 
 	ret = slave.foo1 (123,3.14159,"hello");
 	io.write ("return value = " .. ret .. "\n");

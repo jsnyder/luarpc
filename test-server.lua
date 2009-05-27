@@ -32,8 +32,9 @@ testvar = 23
 
 io.write ("server started\n")
 
-rpc_server (12345);
+rpc_server ("/dev/ptys0");
 
+-- rpc_server (12345);
 
 -- an alternative way
 

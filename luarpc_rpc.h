@@ -110,9 +110,15 @@ enum {
 #define NUM_FUNCNAME_CHARS 4
 
 /* Transport Connection Structure */
+
+/* FIXME: should be cleaner */
 struct _Transport {
 #ifdef LUARPC_ENABLE_SOCKET
   SOCKTYPE fd;      /* INVALID_TRANSPORT if socket is closed */
+#endif
+
+#ifdef LUARPC_ENABLE_SERIAL
+  int fd;      /* INVALID_TRANSPORT if socket is closed */
 #endif
 
 #ifdef LUARPC_ENABLE_FIFO
@@ -149,7 +155,7 @@ typedef struct _ServerHandle ServerHandle;
 #define INVALID_TRANSPORT (-1)
 
 #define TRANSPORT_VERIFY_OPEN \
-  if (tpt->fd == INVALID_TRANSPORT) THROW (ERR_CLOSED);
+	if (tpt->fd == INVALID_TRANSPORT) THROW (ERR_CLOSED);
 
 Handle * handle_create (lua_State *L);
 

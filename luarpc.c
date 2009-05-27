@@ -685,12 +685,12 @@ static void server_handle_destroy (ServerHandle *h)
 /****************************************************************************/
 /* remote function calling (client side) */
 
-/* rpc_open_tcp (ip_address, port)
+/* rpc_connect (ip_address, port)
  *     returns a handle to the new connection, or nil if there was an error.
  *     if there is an RPC error function defined, it will be called on error.
  */
 
-static int rpc_open_tcp (lua_State *L)
+static int rpc_connect (lua_State *L)
 {
   Handle *handle=0;
   
@@ -828,14 +828,16 @@ static void read_function_call (Transport *tpt, lua_State *L)
   /* read in each argument, leave it on the stack */
   for (i=0; i<nargs; i++) read_variable (tpt,L);
 
+	printf("Ready to Call!\n");
+
   /* call the function */
   if (good_function)
 	{
     int nret,error_code;
     tmp_errormessage_buffer[0] = 0;
-
-    error_code = lua_pcall (L,nargs,LUA_MULTRET, stackpos);
-
+		printf("Calling!\n");
+    error_code = lua_pcall (L, nargs, LUA_MULTRET, stackpos);
+		printf("Called!\n");
     /* handle errors */
     if (error_code || tmp_errormessage_buffer[0])
 		{
@@ -865,7 +867,7 @@ static void read_function_call (Transport *tpt, lua_State *L)
     transport_write_string (tpt,msg,strlen(msg));
     transport_write_string (tpt,funcname,len);
   }
-
+	printf("I'm done!\n");
   /* empty the stack */
   lua_settop (L,0);
 }
@@ -904,6 +906,8 @@ static int rpc_listen (lua_State *L)
 {
   ServerHandle *handle;
   handle = rpc_listen_helper (L);
+	if ( handle == 0 )
+		printf("Bad Handle!");
   return 1;
 }
 
@@ -950,6 +954,8 @@ static void rpc_dispatch_helper (lua_State *L, ServerHandle *handle)
 		{
       TRY
 			{
+				/* Wait for available data */
+				while ( transport_readable (&handle->atpt) == 0 );
   			read_function_call (&handle->atpt,L);
   			ENDTRY;
       }
@@ -1098,9 +1104,7 @@ LUALIB_API int luaopen_luarpc(lua_State *L)
   started = 1;
 
   net_startup();
-#ifdef LUARPC_ENABLE_SOCKET
-  lua_register (L,"rpc_open_tcp",rpc_open_tcp);
-#endif
+  lua_register (L,"rpc_connect",rpc_connect);
   lua_register (L,"rpc_close",rpc_close);
   lua_register (L,"rpc_server",rpc_server);
   lua_register (L,"rpc_on_error",rpc_on_error);
