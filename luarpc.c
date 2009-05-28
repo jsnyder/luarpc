@@ -766,12 +766,12 @@ static int rpc_async (lua_State *L)
   Handle *handle;
   check_num_args (L,2);
 
-  if (!lua_isuserdata (L,1) || !ismetatable_type(L, 1, "rpc.handle"))
-    my_lua_error (L,"first argument must be an RPC client handle");
+  if ( !lua_isuserdata( L, 1 ) || !ismetatable_type( L, 1, "rpc.handle" ) )
+    my_lua_error( L, "first argument must be an RPC client handle" );
 
   handle = (Handle*) lua_touserdata (L,1);
 
-  if (lua_isnil (L,2) || (lua_isnumber (L,2) && lua_tonumber (L,2) == 0))
+  if ( lua_isnil( L, 2 ) || ( lua_isnumber( L, 2 ) && lua_tonumber( L, 2 ) == 0) )
     handle->async = 0;
   else
     handle->async = 1;
@@ -786,11 +786,12 @@ static int rpc_async (lua_State *L)
  * server side lua errors.
  */
 
-static char tmp_errormessage_buffer[200];
+static char tmp_errormessage_buffer[ 200 ];
 
-static int server_err_handler (lua_State *L)
+static int server_err_handler( lua_State *L )
 {
-  if (lua_gettop (L) >= 1) {
+  if( lua_gettop ( L ) >= 1 )
+	{
     strncpy( tmp_errormessage_buffer, lua_tostring( L, 1 ), sizeof( tmp_errormessage_buffer ) );
     tmp_errormessage_buffer[ sizeof( tmp_errormessage_buffer ) - 1 ] = 0;
   }
@@ -803,94 +804,96 @@ static int server_err_handler (lua_State *L)
  * around the function call.
  */
 
-static void read_function_call (Transport *tpt, lua_State *L)
+static void read_function_call( Transport *tpt, lua_State *L )
 {
-  int i,stackpos,good_function,nargs;
+  int i, stackpos, good_function, nargs;
   u32 len;
   char *funcname;
 
   /* read function name */
-  len = transport_read_u32 (tpt); /* function name string length */ 
-  funcname = (char*) alloca (len+1);
-  transport_read_string (tpt,funcname,len);
-  funcname[len] = 0;
+  len = transport_read_u32( tpt ); /* function name string length */ 
+  funcname = ( char * ) alloca( len + 1 );
+  transport_read_string( tpt, funcname, len );
+  funcname[ len ] = 0;
 
   /* push error handler for pcall onto stack */
-  lua_pushcfunction (L,server_err_handler);
+  lua_pushcfunction( L, server_err_handler );
 
   /* get function */
-  stackpos = lua_gettop (L);
-  lua_getglobal (L,funcname);
-  good_function = lua_isfunction (L,-1);
+  stackpos = lua_gettop( L );
+  lua_getglobal( L, funcname );
+  good_function = lua_isfunction( L, -1 );
 
   /* read number of arguments */
-  nargs = transport_read_u32 (tpt);
+  nargs = transport_read_u32( tpt );
 
   /* read in each argument, leave it on the stack */
-  for (i=0; i<nargs; i++) read_variable (tpt,L);
+  for ( i = 0; i < nargs; i ++ ) 
+		read_variable( tpt, L );
 
   /* call the function */
-  if (good_function)
+  if( good_function )
 	{
-    int nret,error_code;
-    tmp_errormessage_buffer[0] = 0;
-    error_code = lua_pcall (L, nargs, LUA_MULTRET, stackpos);
+    int nret, error_code;
+    tmp_errormessage_buffer[ 0 ] = 0;
+    error_code = lua_pcall( L, nargs, LUA_MULTRET, stackpos );
     /* handle errors */
-    if (error_code || tmp_errormessage_buffer[0])
+    if ( error_code || tmp_errormessage_buffer[ 0 ] )
 		{
-      int len = strlen (tmp_errormessage_buffer);
-      transport_write_u8 (tpt,1);
-      transport_write_u32 (tpt,error_code);
-      transport_write_u32 (tpt,len);
-      transport_write_string (tpt,tmp_errormessage_buffer,len);
+      int len = strlen( tmp_errormessage_buffer );
+      transport_write_u8( tpt, 1 );
+      transport_write_u32( tpt, error_code );
+      transport_write_u32( tpt, len );
+      transport_write_string( tpt, tmp_errormessage_buffer, len );
     }
     else
 		{
       /* pass the return values back to the caller */
-      transport_write_u8 (tpt,0);
-      nret = lua_gettop (L) - stackpos;
-      transport_write_u32 (tpt,nret);
-      for (i=0; i<nret; i++) write_variable (tpt,L,stackpos+1+i);
+      transport_write_u8( tpt, 0 );
+      nret = lua_gettop( L ) - stackpos;
+      transport_write_u32( tpt, nret );
+      for ( i = 0; i < nret; i ++ )
+				write_variable( tpt, L, stackpos + 1 + i );
     }
   }
   else
 	{
     /* bad function */
     const char *msg = "undefined function: ";
-    int errlen = strlen (msg) + len;
-    transport_write_u8 (tpt,1);
-    transport_write_u32 (tpt,LUA_ERRRUN);
-    transport_write_u32 (tpt,errlen);
-    transport_write_string (tpt,msg,strlen(msg));
-    transport_write_string (tpt,funcname,len);
+    int errlen = strlen( msg ) + len;
+    transport_write_u8( tpt, 1 );
+    transport_write_u32( tpt, LUA_ERRRUN );
+    transport_write_u32( tpt, errlen );
+    transport_write_string( tpt, msg, strlen( msg ) );
+    transport_write_string( tpt, funcname, len );
   }
   /* empty the stack */
-  lua_settop (L,0);
+  lua_settop ( L, 0 );
 }
 
 
-static ServerHandle *rpc_listen_helper (lua_State *L)
+static ServerHandle *rpc_listen_helper( lua_State *L )
 {
   ServerHandle *handle = 0;
-  exception_init();
+  exception_init( );
 
   TRY
 	{
     /* make server handle */
-    handle = server_handle_create(L);
+    handle = server_handle_create( L );
 
     /* make listening transport */
-    transport_open_listener(L, handle);
+    transport_open_listener( L, handle );
 
     ENDTRY;
     return handle;
   }
   CATCH
 	{
-    if (handle)
-			server_handle_destroy (handle);
+    if( handle )
+			server_handle_destroy( handle );
 		
-    deal_with_error (L, 0, errorString (ERRCODE));
+    deal_with_error( L, 0, errorString( ERRCODE ) );
     return 0;
   }
 }
@@ -898,12 +901,14 @@ static ServerHandle *rpc_listen_helper (lua_State *L)
 
 /* rpc_listen (port) --> server_handle */
 
-static int rpc_listen (lua_State *L)
+static int rpc_listen( lua_State *L )
 {
   ServerHandle *handle;
-  handle = rpc_listen_helper (L);
+
+  handle = rpc_listen_helper( L );
 	if ( handle == 0 )
-		printf("Bad Handle!");
+		printf( "Bad Handle!" );
+		
   return 1;
 }
 
@@ -913,37 +918,41 @@ static int rpc_listen (lua_State *L)
 static int rpc_peek (lua_State *L)
 {
   ServerHandle *handle;
-  check_num_args (L,1);
-  if (!(lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.server_handle")))
-    my_lua_error (L,"argument must be an RPC server handle");
 
-  handle = (ServerHandle*) lua_touserdata (L,1);
+  check_num_args( L, 1 );
+  if ( !( lua_isuserdata( L, 1 ) && ismetatable_type( L, 1, "rpc.server_handle" ) ) )
+    my_lua_error( L, "argument must be an RPC server handle" );
+
+  handle = ( ServerHandle * )lua_touserdata( L, 1 );
 
   /* if accepting transport is open, see if there is any data to read */
-  if (transport_is_open (&handle->atpt))
+  if ( transport_is_open( &handle->atpt ) )
 	{
-    if (transport_readable (&handle->atpt))
-			lua_pushnumber (L,1);
+    if ( transport_readable( &handle->atpt ) )
+			lua_pushnumber( L, 1 );
     else 
-			lua_pushnil (L);
+			lua_pushnil( L );
 			
     return 1;
   }
 
   /* otherwise, see if there is a new connection on the listening transport */
-  if (transport_is_open (&handle->ltpt))
+  if ( transport_is_open( &handle->ltpt ) )
 	{
-    if (transport_readable (&handle->ltpt)) lua_pushnumber (L,1);
-    else lua_pushnil (L);
+    if ( transport_readable( &handle->ltpt ) )
+			lua_pushnumber ( L, 1 );
+    else
+			lua_pushnil( L );
+			
     return 1;
   }
 
-  lua_pushnumber (L,0);
+  lua_pushnumber( L, 0 );
   return 1;
 }
 
 
-static void rpc_dispatch_helper (lua_State *L, ServerHandle *handle)
+static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
 {
   exception_init();
   TRY 
@@ -955,7 +964,7 @@ static void rpc_dispatch_helper (lua_State *L, ServerHandle *handle)
 			{
 				/* If transport is readable, read a function call */
 				if ( transport_readable( &handle->atpt ) )
-  				read_function_call (&handle->atpt,L);
+  				read_function_call( &handle->atpt, L );
   			ENDTRY;
       }
       CATCH
@@ -963,9 +972,9 @@ static void rpc_dispatch_helper (lua_State *L, ServerHandle *handle)
 			  /* if the client has closed the connection, close our side
 			   * gracefully too.
 			   */
-  			transport_close (&handle->atpt);
-  			if (ERRCODE != ERR_EOF && ERRCODE != ERR_PROTOCOL)
-					THROW (ERRCODE);
+  			transport_close ( &handle->atpt );
+  			if( ERRCODE != ERR_EOF && ERRCODE != ERR_PROTOCOL )
+					THROW( ERRCODE );
       }
     }
     else
