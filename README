@@ -7,4 +7,38 @@ This is version 0.1, a pre-alpha release.
 Original work done by Russell L. Smith:
 http://www.q12.org/lua
 
-Port to 5.x and continuing work by James Snyder
+Port to 5.x and continuing work by James Snyder.
+
+BUILDING
+--------
+
+In order to build the module, just type:
+
+make
+
+This should succeed if you have Lua already installed on a Linux or Mac OS X
+system. If it does not succeed, feel free to contact me at
+jbsnyder@fanplastic.org.
+
+As of May 28, 2009, serial and socket "transport" modes should be functional.
+One can switch between these by selectively commenting/uncommenting lines in
+config.h as below:
+
+/* #define LUARPC_ENABLE_SOCKET */
+#define LUARPC_ENABLE_SERIAL
+
+This builds the module in serial mode. At this time, one cannot build with
+multiple modes enabled (this may be added in the future).
+
+USAGE
+-----
+
+The result of the build is a .so file that within a Lua script, one should be
+able to simply do a:
+
+require("luarpc")
+
+with the module in the Lua path, and use the module as suggested in
+test-client.lua and test-server.lua.
+
+Ensure that your scripts reflect the type of enabled "transport" in use.
