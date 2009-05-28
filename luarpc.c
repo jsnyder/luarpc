@@ -60,6 +60,8 @@ static const char * errorString (int n)
   case ERR_EOF: return "connection closed unexpectedly (\"end of file\")";
   case ERR_CLOSED: return "operation requested on a closed transport";
   case ERR_PROTOCOL: return "error in the received Lua-RPC protocol";
+	case ERR_NODATA: return "no data received when attempting to read";
+	case ERR_BADFNAME: return "function name is too long";
   default: return transport_strerror (n);
   }
 }
@@ -79,7 +81,6 @@ static void exception_init()
   exception_num_trys = 0;
   exception_errnum = 0;
 }
-
 
 /* throw an exception. this will jump to the most recent CATCH block. */
 
@@ -165,7 +166,7 @@ static void transport_write_u32 (Transport *tpt, u32 x)
 /* Represent doubles as byte string */
 union DoubleBytes {
   double d;
-  u8 b[8];
+  u8 b[ 8 ];
 };
 
 /* read a double from the transport */
@@ -175,7 +176,7 @@ static double transport_read_double (Transport *tpt)
   union DoubleBytes double_bytes;
   TRANSPORT_VERIFY_OPEN;
   /* @@@ handle endianness */
-  transport_read_buffer (tpt,double_bytes.b,8);
+  transport_read_buffer ( tpt,double_bytes.b, 8 );
   return double_bytes.d;
 }
 
@@ -828,16 +829,12 @@ static void read_function_call (Transport *tpt, lua_State *L)
   /* read in each argument, leave it on the stack */
   for (i=0; i<nargs; i++) read_variable (tpt,L);
 
-	printf("Ready to Call!\n");
-
   /* call the function */
   if (good_function)
 	{
     int nret,error_code;
     tmp_errormessage_buffer[0] = 0;
-		printf("Calling!\n");
     error_code = lua_pcall (L, nargs, LUA_MULTRET, stackpos);
-		printf("Called!\n");
     /* handle errors */
     if (error_code || tmp_errormessage_buffer[0])
 		{
@@ -867,7 +864,6 @@ static void read_function_call (Transport *tpt, lua_State *L)
     transport_write_string (tpt,msg,strlen(msg));
     transport_write_string (tpt,funcname,len);
   }
-	printf("I'm done!\n");
   /* empty the stack */
   lua_settop (L,0);
 }
@@ -926,8 +922,11 @@ static int rpc_peek (lua_State *L)
   /* if accepting transport is open, see if there is any data to read */
   if (transport_is_open (&handle->atpt))
 	{
-    if (transport_readable (&handle->atpt)) lua_pushnumber (L,1);
-    else lua_pushnil (L);
+    if (transport_readable (&handle->atpt))
+			lua_pushnumber (L,1);
+    else 
+			lua_pushnil (L);
+			
     return 1;
   }
 
@@ -950,13 +949,13 @@ static void rpc_dispatch_helper (lua_State *L, ServerHandle *handle)
   TRY 
 	{
     /* if accepting transport is open, read function calls */
-    if (transport_is_open (&handle->atpt))
+    if ( transport_is_open ( &handle->atpt ) )
 		{
       TRY
 			{
-				/* Wait for available data */
-				while ( transport_readable ( &handle->atpt ) == 0 );
-  			read_function_call (&handle->atpt,L);
+				/* If transport is readable, read a function call */
+				if ( transport_readable( &handle->atpt ) )
+  				read_function_call (&handle->atpt,L);
   			ENDTRY;
       }
       CATCH
@@ -995,8 +994,8 @@ static void rpc_dispatch_helper (lua_State *L, ServerHandle *handle)
   }
   CATCH
 	{
-    server_handle_shutdown (handle);
-    deal_with_error (L, 0, errorString (ERRCODE));
+		/* server_handle_shutdown (handle); */
+		deal_with_error (L, 0, errorString (ERRCODE));
   }
 }
 
@@ -1023,9 +1022,11 @@ static int rpc_dispatch (lua_State *L)
 static int rpc_server (lua_State *L)
 {
   ServerHandle *handle = rpc_listen_helper (L);
-  while (transport_is_open (&handle->ltpt))
-    rpc_dispatch_helper (L,handle);
-
+  while ( transport_is_open (&handle->ltpt) )
+		rpc_dispatch_helper( L, handle );
+	
+	printf("LT: %d, AT: %d\n",handle->ltpt.fd, handle->atpt.fd);
+	
   server_handle_destroy (handle);
   return 0;
 }

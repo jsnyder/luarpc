@@ -62,7 +62,9 @@
 enum {
   ERR_EOF      = MAXINT - 100,  /* reached end of file on transport */
   ERR_CLOSED   = MAXINT - 101,  /* attempted operation on closed transport */
-  ERR_PROTOCOL = MAXINT - 102 /* some error in the received protocol */
+  ERR_PROTOCOL = MAXINT - 102, /* some error in the received protocol */
+	ERR_NODATA	 = MAXINT - 103,
+	ERR_BADFNAME = MAXINT - 104
 };
 
 
@@ -153,6 +155,8 @@ typedef struct _ServerHandle ServerHandle;
 
 
 #define INVALID_TRANSPORT (-1)
+
+#define SYNC_FLAG (0x7e)
 
 #define TRANSPORT_VERIFY_OPEN \
 	if (tpt->fd == INVALID_TRANSPORT) THROW (ERR_CLOSED);
