@@ -1,6 +1,6 @@
-Lua-RPC is a Lua library to allow simple remote procedure
-calling. That is, a Lua script running on one machine can call
-functions from a script that is running on another machine.
+Lua-RPC is a Lua library to allow simple remote procedure calling. That is, a
+Lua script running on one machine can call functions from a script that is
+running on another machine.
 
 This is version 0.2, a pre-alpha release.
 
