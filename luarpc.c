@@ -994,7 +994,7 @@ static void rpc_dispatch_helper (lua_State *L, ServerHandle *handle)
   }
   CATCH
 	{
-		/* server_handle_shutdown (handle); */
+		server_handle_shutdown (handle);
 		deal_with_error (L, 0, errorString (ERRCODE));
   }
 }
