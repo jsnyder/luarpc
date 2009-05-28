@@ -84,12 +84,12 @@ static void exception_init()
 
 /* throw an exception. this will jump to the most recent CATCH block. */
 
-void exception_throw (int n)
+void exception_throw( int n )
 {
-  MYASSERT (exception_num_trys > 0);
+  MYASSERT( exception_num_trys > 0 );
   exception_errnum = n;
   exception_num_trys--;
-  longjmp (exception_stack[exception_num_trys],1);
+  longjmp( exception_stack[ exception_num_trys ], 1 );
 }
 
 /****************************************************************************/
@@ -100,15 +100,15 @@ void exception_throw (int n)
 
 /* read from the transport into a string buffer. */
 
-static void transport_read_string (Transport *tpt, const char *buffer, int length)
+static void transport_read_string( Transport *tpt, const char *buffer, int length )
 {
-  transport_read_buffer (tpt,(u8*) buffer,length);
+  transport_read_buffer( tpt, ( u8 * )buffer, length );
 }
 
 
 /* write a string buffer to the transport */
 
-static void transport_write_string (Transport *tpt, const char *buffer, int length)
+static void transport_write_string( Transport *tpt, const char *buffer, int length )
 {
   transport_write_buffer (tpt,(u8*) buffer,length);
 }
@@ -116,18 +116,18 @@ static void transport_write_string (Transport *tpt, const char *buffer, int leng
 
 /* read a u8 from the transport */
 
-static u8 transport_read_u8 (Transport *tpt)
+static u8 transport_read_u8( Transport *tpt )
 {
   u8 b;
   TRANSPORT_VERIFY_OPEN;
-  transport_read_buffer (tpt,&b,1);
+  transport_read_buffer( tpt, &b, 1 );
   return b;
 }
 
 
 /* write a u8 to the transport */
 
-static void transport_write_u8 (Transport *tpt, u8 x)
+static void transport_write_u8( Transport *tpt, u8 x )
 {
   int n;
   TRANSPORT_VERIFY_OPEN;
@@ -137,13 +137,13 @@ static void transport_write_u8 (Transport *tpt, u8 x)
 
 /* read a u32 from the transport */
 
-static u32 transport_read_u32 (Transport *tpt)
+static u32 transport_read_u32( Transport *tpt )
 {
   u8 b[4];
   u32 i;
   TRANSPORT_VERIFY_OPEN;
-  transport_read_buffer (tpt,b,4);
-  i = (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
+  transport_read_buffer ( tpt, b, 4 );
+  i = ( b[ 0 ] << 24 ) | (b[ 1 ] << 16 ) | ( b[ 2 ] << 8) | b[ 3 ];
   return i;
 }
 
@@ -590,11 +590,11 @@ static int helper_function (lua_State *L)
 
     /* write number of arguments */
     n = lua_gettop (L);
-    transport_write_u32 (tpt,n-1);
+    transport_write_u32( tpt, n - 1 );
     
     /* write each argument */
-    for (i=2; i<=n; i++)
-			write_variable (tpt,L,i);
+    for( i = 2; i <= n; i ++ )
+			write_variable( tpt, L, i );
 
     /* if we're in async mode, we're done */
     if ( h->handle->async )
@@ -605,14 +605,15 @@ static int helper_function (lua_State *L)
     }
 
     /* read return code */
-    ret_code = transport_read_u8 (tpt);
+    ret_code = transport_read_u8( tpt );
 
-    if (ret_code==0) {
+    if ( ret_code== 0 )
+		{
       /* read return arguments */
-      nret = transport_read_u32 (tpt);
+      nret = transport_read_u32( tpt );
       
-			for (i=0; i < ((int) nret); i++)
-				read_variable (tpt,L);
+			for ( i = 0; i < ((int) nret); i ++ )
+				read_variable( tpt, L );
 			
       ENDTRY;
       return nret;
@@ -620,25 +621,25 @@ static int helper_function (lua_State *L)
     else
 		{
       /* read error and handle it */
-      u32 code = transport_read_u32 (tpt);
-      u32 len = transport_read_u32 (tpt);
-      char *err_string = (char*) alloca (len+1);
-      transport_read_string (tpt,err_string,len);
-      err_string[len] = 0;
+      u32 code = transport_read_u32( tpt );
+      u32 len = transport_read_u32( tpt );
+      char *err_string = ( char * )alloca( len + 1 );
+      transport_read_string( tpt, err_string, len );
+      err_string[ len ] = 0;
 
       ENDTRY;
-      deal_with_error (L,h->handle,err_string);
+      deal_with_error( L, h->handle, err_string );
       return 0;
     }
   }
   CATCH
 	{
-    if (ERRCODE == ERR_CLOSED)
-      my_lua_error (L,"can't refer to a remote function after the handle has been closed");
+    if ( ERRCODE == ERR_CLOSED )
+      my_lua_error( L, "can't refer to a remote function after the handle has been closed" );
     else
 		{
-      deal_with_error (L, h->handle, errorString (ERRCODE));
-      transport_close (tpt);
+      deal_with_error( L, h->handle, errorString( ERRCODE ) );
+      transport_close( tpt );
     }
     return 0;
   }
@@ -647,40 +648,40 @@ static int helper_function (lua_State *L)
 
 /* garbage collection for helpers */
 
-static int helper_gc (lua_State *L)
+static int helper_gc( lua_State *L )
 {
-  MYASSERT (lua_gettop (L) == 1);
-  MYASSERT (lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.helper"));
-  helper_destroy (L,(Helper*) lua_touserdata (L,1));
+  MYASSERT( lua_gettop( L ) == 1 );
+  MYASSERT( lua_isuserdata( L, 1 ) && ismetatable_type( L, 1, "rpc.helper" ) );
+  helper_destroy( L, ( Helper * )lua_touserdata( L, 1 ) );
   return 0;
 }
 
 /****************************************************************************/
 /* server side handle userdata objects. */
 
-static ServerHandle * server_handle_create(lua_State *L)
+static ServerHandle * server_handle_create( lua_State *L )
 {
-  ServerHandle *h = (ServerHandle *)lua_newuserdata(L, sizeof(ServerHandle));
-  luaL_getmetatable(L, "rpc.server_handle");
-  lua_setmetatable(L, -2);
+  ServerHandle *h = ( ServerHandle * )lua_newuserdata( L, sizeof( ServerHandle ) );
+  luaL_getmetatable( L, "rpc.server_handle" );
+  lua_setmetatable( L, -2 );
 
-  transport_init (&h->ltpt);
-  transport_init (&h->atpt);
+  transport_init( &h->ltpt );
+  transport_init( &h->atpt );
   return h;
 }
 
 
-static void server_handle_shutdown (ServerHandle *h)
+static void server_handle_shutdown( ServerHandle *h )
 {
-  transport_close (&h->ltpt);
-  transport_close (&h->atpt);
+  transport_close( &h->ltpt );
+  transport_close( &h->atpt );
 }
 
 
-static void server_handle_destroy (ServerHandle *h)
+static void server_handle_destroy( ServerHandle *h )
 {
-  server_handle_shutdown (h);
-  free (h);
+  server_handle_shutdown( h );
+  free( h );
 }
 
 /****************************************************************************/
@@ -691,16 +692,16 @@ static void server_handle_destroy (ServerHandle *h)
  *     if there is an RPC error function defined, it will be called on error.
  */
 
-static int rpc_connect (lua_State *L)
+static int rpc_connect( lua_State *L )
 {
-  Handle *handle=0;
+  Handle *handle = 0;
   
-  exception_init();
+  exception_init( );
   TRY
 	{
-    char header[5];
-    handle = handle_create(L);
-    transport_open_connection(L, handle);
+    char header[ 5 ];
+    handle = handle_create (L );
+    transport_open_connection( L, handle );
     
     /* write the protocol header */
     header[0] = 'L';
@@ -708,16 +709,18 @@ static int rpc_connect (lua_State *L)
     header[2] = 'P';
     header[3] = 'C';
     header[4] = RPC_PROTOCOL_VERSION;
-    transport_write_string (&handle->tpt,header,sizeof(header));
+    transport_write_string( &handle->tpt, header, sizeof( header ) );
     
     ENDTRY;
     return 1;
   }
   CATCH
 	{
-    if (handle) handle_deref (L,handle);
-    deal_with_error (L, 0, errorString (ERRCODE));
-    lua_pushnil (L);
+    if( handle )
+			handle_deref( L, handle );
+			
+    deal_with_error( L, 0, errorString( ERRCODE ) );
+    lua_pushnil( L );
     return 1;
   }
 }
@@ -730,27 +733,27 @@ static int rpc_connect (lua_State *L)
  *     it's a lua runtime error to refer to a transport after it has been closed.
  */
 
-static int rpc_close (lua_State *L)
+static int rpc_close( lua_State *L )
 {
-  check_num_args (L,1);
+  check_num_args( L, 1 );
 
-  if (lua_isuserdata (L,1))
+  if( lua_isuserdata( L, 1 ) )
 	{
-    if (ismetatable_type(L, 1, "rpc.handle"))
+    if( ismetatable_type( L, 1, "rpc.handle" ) )
 		{
-      Handle *handle = (Handle*) lua_touserdata (L,1);
-      transport_close (&handle->tpt);
+      Handle *handle = ( Handle * )lua_touserdata( L, 1 );
+      transport_close( &handle->tpt );
       return 0;
     }
-    if (ismetatable_type(L, 1, "rpc.server_handle"))
+    if( ismetatable_type( L, 1, "rpc.server_handle" ) )
 		{
-      ServerHandle *handle = (ServerHandle*) lua_touserdata (L,1);
-      server_handle_shutdown (handle);
+      ServerHandle *handle = ( ServerHandle * )lua_touserdata( L, 1 );
+      server_handle_shutdown( handle );
       return 0;
     }
   }
 
-  my_lua_error (L,"argument must be an RPC handle");
+  my_lua_error(L,"argument must be an RPC handle");
   return 0;
 }
 
@@ -954,17 +957,19 @@ static int rpc_peek (lua_State *L)
 
 static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
 {
-  exception_init();
+  exception_init( );
   TRY 
 	{
     /* if accepting transport is open, read function calls */
-    if ( transport_is_open ( &handle->atpt ) )
+    if ( transport_is_open( &handle->atpt ) )
 		{
       TRY
 			{
 				/* If transport is readable, read a function call */
-				if ( transport_readable( &handle->atpt ) )
+				if ( transport_readable( &handle->atpt ) && transport_is_open( &handle->atpt ) )
+				{
   				read_function_call( &handle->atpt, L );
+				}
   			ENDTRY;
       }
       CATCH
@@ -972,7 +977,7 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
 			  /* if the client has closed the connection, close our side
 			   * gracefully too.
 			   */
-  			transport_close ( &handle->atpt );
+  			transport_close( &handle->atpt );
   			if( ERRCODE != ERR_EOF && ERRCODE != ERR_PROTOCOL )
 					THROW( ERRCODE );
       }
@@ -982,19 +987,19 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
       /* if accepting transport is not open, accept a new connection from the
        * listening transport.
        */
-      char header[5];
-      transport_accept (&handle->ltpt, &handle->atpt);
+      char header[ 5 ];
+      transport_accept( &handle->ltpt, &handle->atpt );
 
       /* check that the header is ok */
-      transport_read_string (&handle->atpt,header,sizeof(header));
-      if (header[0] != 'L' ||
+      transport_read_string( &handle->atpt, header, sizeof( header ) );
+      if( header[0] != 'L' ||
           header[1] != 'R' ||
           header[2] != 'P' ||
           header[3] != 'C' ||
-          header[4] != RPC_PROTOCOL_VERSION)
+          header[4] != RPC_PROTOCOL_VERSION )
       {
         /* bad remote function call header, close the connection */
-        transport_close (&handle->atpt);
+        transport_close( &handle->atpt );
         ENDTRY;
         return;
       }
@@ -1003,51 +1008,55 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
   }
   CATCH
 	{
-		server_handle_shutdown (handle);
-		deal_with_error (L, 0, errorString (ERRCODE));
+		/* If exception is non-fatal, don't die.  Otherwise deal with error. */
+		if( ERRCODE != ERR_NODATA ) 
+		{
+			server_handle_shutdown( handle );
+			deal_with_error( L, 0, errorString( ERRCODE ) );
+		}
   }
 }
 
 
 /* rpc_dispatch (server_handle) */
 
-static int rpc_dispatch (lua_State *L)
+static int rpc_dispatch( lua_State *L )
 {
   ServerHandle *handle;
-  check_num_args (L,1);
+  check_num_args( L, 1 );
 
-  if (!(lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.server_handle")))
-    my_lua_error (L,"argument must be an RPC server handle");
+  if ( ! ( lua_isuserdata( L, 1 ) && ismetatable_type( L, 1, "rpc.server_handle" ) ) )
+    my_lua_error( L, "argument must be an RPC server handle" );
 
-  handle = (ServerHandle*) lua_touserdata (L,1);
+  handle = ( ServerHandle * )lua_touserdata( L, 1 );
 
-  rpc_dispatch_helper (L,handle);
+  rpc_dispatch_helper( L, handle );
   return 0;
 }
 
 
 /* lrf_server (port) */
 
-static int rpc_server (lua_State *L)
+static int rpc_server( lua_State *L )
 {
-  ServerHandle *handle = rpc_listen_helper (L);
-  while ( transport_is_open (&handle->ltpt) )
+  ServerHandle *handle = rpc_listen_helper( L );
+  while ( transport_is_open( &handle->ltpt ) )
 		rpc_dispatch_helper( L, handle );
 	
-	printf("LT: %d, AT: %d\n",handle->ltpt.fd, handle->atpt.fd);
+	printf( "LT: %d, AT: %d\n", handle->ltpt.fd, handle->atpt.fd );
 	
-  server_handle_destroy (handle);
+  server_handle_destroy( handle );
   return 0;
 }
 
 
 /* garbage collection for server handles */
 
-static int server_handle_gc (lua_State *L)
+static int server_handle_gc( lua_State *L )
 {
-  MYASSERT (lua_gettop (L) == 1);
-  MYASSERT (lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.server_handle"));
-  server_handle_destroy ((ServerHandle*) lua_touserdata (L,1));
+  MYASSERT( lua_gettop( L ) == 1 );
+  MYASSERT( lua_isuserdata( L, 1 ) && ismetatable_type( L, 1, "rpc.server_handle" ) );
+  server_handle_destroy( ( ServerHandle * )lua_touserdata( L, 1 ) );
   return 0;
 }
 
@@ -1057,19 +1066,21 @@ static int server_handle_gc (lua_State *L)
 /* rpc_on_error ([handle,] error_handler)
  */
 
-static int rpc_on_error (lua_State *L)
+static int rpc_on_error( lua_State *L )
 {
-  check_num_args (L,1);
+  check_num_args( L, 1 );
 
-  if (global_error_handler !=  LUA_NOREF) lua_unref (L,global_error_handler);
+  if( global_error_handler !=  LUA_NOREF )
+		lua_unref (L,global_error_handler);
+	
   global_error_handler = LUA_NOREF;
 
-  if (lua_isfunction (L,1)) {
-    global_error_handler = lua_ref (L,1);
-  }
-  else if (lua_isnil (L,1)) {
-  }
-  else my_lua_error (L,"bad arguments");
+  if ( lua_isfunction( L, 1 ) )
+    global_error_handler = lua_ref( L, 1 );
+  else if ( lua_isnil( L, 1 ) )
+		{ ;; }
+  else
+		my_lua_error( L, "bad arguments" );
 
   /* @@@ add option for handle */
   /* Handle *h = (Handle*) lua_touserdata (L,1); */
@@ -1083,9 +1094,9 @@ static int rpc_on_error (lua_State *L)
 
 /* debugging function */
 
-static int garbage_collect (lua_State *L)
+static int garbage_collect( lua_State *L )
 {
-  lua_gc (L,LUA_GCCOLLECT,0);
+  lua_gc(L, LUA_GCCOLLECT, 0 );
   return 0;
 }
 
@@ -1097,7 +1108,7 @@ static const luaL_reg rpc_handle[] =
 
 static const luaL_reg rpc_helper[] =
 {
-  { "__call", helper_function   },
+  { "__call", helper_function },
   { NULL,   NULL    }
 };
 
@@ -1110,30 +1121,32 @@ static const luaL_reg rpc_server_handle[] =
 LUALIB_API int luaopen_luarpc(lua_State *L)
 {
   static int started = 0;
-  if (started) panic ("luaopen_rpc() called more than once");
-  started = 1;
-
-  net_startup();
-  lua_register (L,"rpc_connect",rpc_connect);
-  lua_register (L,"rpc_close",rpc_close);
-  lua_register (L,"rpc_server",rpc_server);
-  lua_register (L,"rpc_on_error",rpc_on_error);
-  lua_register (L,"rpc_listen",rpc_listen);
-  lua_register (L,"rpc_peek",rpc_peek);
-  lua_register (L,"rpc_dispatch",rpc_dispatch);
-  lua_register (L,"rpc_async",rpc_async);
-
-  luaL_newmetatable(L, "rpc.helper");
-  luaL_openlib(L,NULL,rpc_helper,0);
+  if ( started )
+		panic( "luaopen_rpc() called more than once" );
   
-  luaL_newmetatable(L, "rpc.handle");
-  luaL_openlib(L,NULL,rpc_handle,0);
-  
-  luaL_newmetatable(L, "rpc.server_handle");
-  luaL_openlib(L,NULL,rpc_server_handle,0);
+	started = 1;
 
-  if (sizeof(double) != 8)
-    debug ("internal error: sizeof(double) != 8");
+  net_startup( );
+  lua_register( L, "rpc_connect", rpc_connect );
+  lua_register( L, "rpc_close", rpc_close );
+  lua_register( L, "rpc_server", rpc_server );
+  lua_register( L, "rpc_on_error", rpc_on_error );
+  lua_register( L, "rpc_listen", rpc_listen );
+  lua_register( L, "rpc_peek", rpc_peek );
+  lua_register( L, "rpc_dispatch", rpc_dispatch );
+  lua_register( L, "rpc_async", rpc_async );
+
+  luaL_newmetatable( L, "rpc.helper" );
+  luaL_openlib( L, NULL, rpc_helper, 0 );
+  
+  luaL_newmetatable( L, "rpc.handle" );
+  luaL_openlib( L, NULL, rpc_handle, 0 );
+  
+  luaL_newmetatable( L, "rpc.server_handle" );
+  luaL_openlib( L, NULL, rpc_server_handle, 0 );
+
+  if ( sizeof( double ) != 8 )
+    debug ( "internal error: sizeof(double) != 8" );
 
   return 1;
 }

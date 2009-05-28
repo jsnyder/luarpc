@@ -98,9 +98,9 @@ enum {
 #define ERRCODE (exception_errnum)
 
 #define TRY \
-  MYASSERT (exception_num_trys < MAX_NESTED_TRYS); \
+  MYASSERT( exception_num_trys < MAX_NESTED_TRYS ); \
   exception_num_trys++; \
-  if (setjmp (exception_stack[exception_num_trys-1]) == 0)
+  if( setjmp( exception_stack[ exception_num_trys-1 ] ) == 0 )
 
 #define ENDTRY { \
   MYASSERT (exception_num_trys > 0); \
@@ -161,11 +161,11 @@ typedef struct _ServerHandle ServerHandle;
 #define TRANSPORT_VERIFY_OPEN \
 	if (tpt->fd == INVALID_TRANSPORT) THROW (ERR_CLOSED);
 
-Handle * handle_create (lua_State *L);
-
+/* Arg & Error Checking Provided to Transport Mechanisms */
 int check_num_args (lua_State *L, int desired_n);
 void deal_with_error (lua_State *L, Handle *h, const char *error_string);
 void exception_throw (int n);
+
 
 /* TRANSPORT API */
 
