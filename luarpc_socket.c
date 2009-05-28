@@ -342,7 +342,7 @@ int transport_readable (Transport *tpt)
   if (tpt->fd == INVALID_TRANSPORT)
 		return 0;
 	
-	FD_ZERO (&readfs);
+	FD_ZERO (&set);
   FD_SET (tpt->fd,&set);
 
   tv.tv_sec = 0;
