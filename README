@@ -22,6 +22,8 @@ This should succeed if you have Lua already installed on a Linux or Mac OS X
 system. If it does not succeed, feel free to contact me at
 jbsnyder@fanplastic.org.
 
+NOTE: using psuedo-terminals on Linux still has issues.
+
 As of May 28, 2009, serial and socket "transport" modes should be functional.
 One can switch between these by selectively commenting/uncommenting lines in
 config.h as below:
