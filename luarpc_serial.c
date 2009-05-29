@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
 #include <sys/time.h>
@@ -29,6 +30,7 @@ void transport_init (Transport *tpt)
 void transport_open( Transport *tpt, const char *path )
 {
 	struct termios options;
+	
 	tpt->fd = open(path , O_RDWR | O_NOCTTY );
 	
 	if( tpt->fd == INVALID_TRANSPORT)
@@ -57,7 +59,7 @@ void transport_open_listener(lua_State *L, ServerHandle *handle)
     my_lua_error (L,"first argument must be serial serial port");
 
 	transport_open( &handle->ltpt, lua_tostring (L,1) );
-	
+		
 	while( transport_readable ( &handle->ltpt ) == 0 ); /* wait for incoming data */
 }
 

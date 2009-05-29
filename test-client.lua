@@ -19,6 +19,7 @@ function doStuff()
 
 	-- local slave,err = rpc_connect ("localhost",12345);
 	local slave,err = rpc_connect ("/dev/ttys0");
+	-- local slave,err = rpc_connect ("/dev/pts/4");
 	if not slave then
 		io.write ("error: " .. err .. "\n");
 		exit();

@@ -471,40 +471,14 @@ Handle * handle_create (lua_State *L)
   return h;
 }
 
-
-static void handle_ref (Handle *h)
-{
-  h->refcount++;
-}
-
-
-static void handle_deref (lua_State *L, Handle *h)
-{
-  h->refcount--;
-  if (h->refcount <= 0) {
-    transport_close (&h->tpt);
-    if (h->error_handler != LUA_NOREF) lua_unref (L,h->error_handler);
-    free (h);
-  }
-}
-
-
 static Helper * helper_create (lua_State *L, Handle *handle, const char *funcname)
 {
   Helper *h = (Helper *)lua_newuserdata(L, sizeof (Helper) - NUM_FUNCNAME_CHARS + strlen(funcname) + 1);
   luaL_getmetatable(L, "rpc.helper");
   lua_setmetatable(L, -2);
   h->handle = handle;
-  handle_ref (h->handle);
   strcpy (h->funcname,funcname);
   return h;
-}
-
-
-static void helper_destroy (lua_State *L, Helper *h)
-{
-  handle_deref (L,h->handle);
-  free (h);
 }
 
 
@@ -528,15 +502,7 @@ static int handle_index (lua_State *L)
 }
 
 
-/* garbage collection for handles */
 
-static int handle_gc (lua_State *L)
-{
-  MYASSERT (lua_gettop (L) == 1);
-  MYASSERT (lua_isuserdata (L,1) && ismetatable_type(L, 1, "rpc.handle"));
-  handle_deref (L,(Handle*) lua_touserdata (L,1));
-  return 0;
-}
 
 static int helper_function (lua_State *L)
 {
@@ -645,17 +611,6 @@ static int helper_function (lua_State *L)
   }
 }
 
-
-/* garbage collection for helpers */
-
-static int helper_gc( lua_State *L )
-{
-  MYASSERT( lua_gettop( L ) == 1 );
-  MYASSERT( lua_isuserdata( L, 1 ) && ismetatable_type( L, 1, "rpc.helper" ) );
-  helper_destroy( L, ( Helper * )lua_touserdata( L, 1 ) );
-  return 0;
-}
-
 /****************************************************************************/
 /* server side handle userdata objects. */
 
@@ -681,7 +636,6 @@ static void server_handle_shutdown( ServerHandle *h )
 static void server_handle_destroy( ServerHandle *h )
 {
   server_handle_shutdown( h );
-  free( h );
 }
 
 /****************************************************************************/
@@ -715,10 +669,7 @@ static int rpc_connect( lua_State *L )
     return 1;
   }
   CATCH
-	{
-    if( handle )
-			handle_deref( L, handle );
-			
+	{			
     deal_with_error( L, 0, errorString( ERRCODE ) );
     lua_pushnil( L );
     return 1;
@@ -1049,17 +1000,6 @@ static int rpc_server( lua_State *L )
   return 0;
 }
 
-
-/* garbage collection for server handles */
-
-static int server_handle_gc( lua_State *L )
-{
-  MYASSERT( lua_gettop( L ) == 1 );
-  MYASSERT( lua_isuserdata( L, 1 ) && ismetatable_type( L, 1, "rpc.server_handle" ) );
-  server_handle_destroy( ( ServerHandle * )lua_touserdata( L, 1 ) );
-  return 0;
-}
-
 /****************************************************************************/
 /* more error handling stuff */
 
@@ -1091,14 +1031,6 @@ static int rpc_on_error( lua_State *L )
 
 /****************************************************************************/
 /* register RPC functions */
-
-/* debugging function */
-
-static int garbage_collect( lua_State *L )
-{
-  lua_gc(L, LUA_GCCOLLECT, 0 );
-  return 0;
-}
 
 static const luaL_reg rpc_handle[] =
 {

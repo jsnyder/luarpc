@@ -33,7 +33,7 @@ testvar = 23
 io.write ("server started\n")
 
 rpc_server ("/dev/ptys0"); -- use for serial mode
-
+-- rpc_server ("/dev/ptmx"); -- use for serial mode
 -- rpc_server (12345); -- use for socket mode
 
 -- an alternative way
