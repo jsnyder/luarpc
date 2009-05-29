@@ -76,7 +76,7 @@ volatile static int exception_errnum = 0;
  * stack, which is not used at all outside Lua-RPC.
  */
 
-static void exception_init()
+static void exception_init( )
 {
   exception_num_trys = 0;
   exception_errnum = 0;
@@ -110,7 +110,7 @@ static void transport_read_string( Transport *tpt, const char *buffer, int lengt
 
 static void transport_write_string( Transport *tpt, const char *buffer, int length )
 {
-  transport_write_buffer (tpt,(u8*) buffer,length);
+  transport_write_buffer( tpt, ( u8 * )buffer, length );
 }
 
 
@@ -540,22 +540,22 @@ static int helper_function (lua_State *L)
   			u32 code = transport_read_u32 (tpt);
   			u32 len = transport_read_u32 (tpt);
   			char *err_string = (char*) alloca (len+1);
-  			transport_read_string (tpt,err_string,len);
-  			err_string[len] = 0;
+  			transport_read_string( tpt, err_string, len );
+  			err_string[ len ] = 0;
 
   			ENDTRY;
-  			deal_with_error (L,h->handle,err_string);
+  			deal_with_error( L, h->handle, err_string );
   			return 0;
       }
     }
 
     /* write function name */
-    len = strlen (h->funcname);
-    transport_write_u32 (tpt,len);
-    transport_write_string (tpt,h->funcname,len);
+    len = strlen( h->funcname );
+    transport_write_u32 ( tpt, len );
+    transport_write_string( tpt, h->funcname, len );
 
     /* write number of arguments */
-    n = lua_gettop (L);
+    n = lua_gettop( L );
     transport_write_u32( tpt, n - 1 );
     
     /* write each argument */
@@ -578,7 +578,7 @@ static int helper_function (lua_State *L)
       /* read return arguments */
       nret = transport_read_u32( tpt );
       
-			for ( i = 0; i < ((int) nret); i ++ )
+			for ( i = 0; i < ( (int ) nret ); i ++ )
 				read_variable( tpt, L );
 			
       ENDTRY;
@@ -614,7 +614,7 @@ static int helper_function (lua_State *L)
 /****************************************************************************/
 /* server side handle userdata objects. */
 
-static ServerHandle * server_handle_create( lua_State *L )
+static ServerHandle *server_handle_create( lua_State *L )
 {
   ServerHandle *h = ( ServerHandle * )lua_newuserdata( L, sizeof( ServerHandle ) );
   luaL_getmetatable( L, "rpc.server_handle" );
@@ -718,12 +718,12 @@ static int rpc_close( lua_State *L )
 static int rpc_async (lua_State *L)
 {
   Handle *handle;
-  check_num_args (L,2);
+  check_num_args( L, 2 );
 
   if ( !lua_isuserdata( L, 1 ) || !ismetatable_type( L, 1, "rpc.handle" ) )
     my_lua_error( L, "first argument must be an RPC client handle" );
 
-  handle = (Handle*) lua_touserdata (L,1);
+  handle = ( Handle * )lua_touserdata( L, 1 );
 
   if ( lua_isnil( L, 2 ) || ( lua_isnumber( L, 2 ) && lua_tonumber( L, 2 ) == 0) )
     handle->async = 0;
@@ -1034,19 +1034,19 @@ static int rpc_on_error( lua_State *L )
 
 static const luaL_reg rpc_handle[] =
 {
-  { "__index",  handle_index },
-  { NULL,   NULL    }
+  { "__index", handle_index },
+  { NULL, NULL }
 };
 
 static const luaL_reg rpc_helper[] =
 {
   { "__call", helper_function },
-  { NULL,   NULL    }
+  { NULL, NULL }
 };
 
 static const luaL_reg rpc_server_handle[] =
 {
-  { NULL,   NULL    }
+  { NULL, NULL }
 };
 
 static const luaL_reg rpc_map[] =
