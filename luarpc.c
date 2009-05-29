@@ -95,9 +95,6 @@ void exception_throw( int n )
 /****************************************************************************/
 /* transport layer generics */
 
-/* initialize a transport struct */
-
-
 /* read from the transport into a string buffer. */
 
 static void transport_read_string( Transport *tpt, const char *buffer, int length )
