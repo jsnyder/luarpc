@@ -17,8 +17,8 @@ function doStuff()
 	rpc.on_error (error_handler);
 	io.write ("error set\n")
 
-	-- local slave,err = rpc.connect ("localhost",12345);
-	local slave,err = rpc.connect ("/dev/ttys0");
+	local slave,err = rpc.connect ("localhost",12345);
+	-- local slave,err = rpc.connect ("/dev/ttys0");
 	-- local slave,err = rpc.connect ("/dev/pts/4");
 	if not slave then
 		io.write ("error: " .. err .. "\n");

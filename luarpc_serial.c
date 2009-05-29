@@ -34,7 +34,7 @@ void transport_open( Transport *tpt, const char *path )
 	tpt->fd = open(path , O_RDWR | O_NOCTTY );
 	
 	if( tpt->fd == INVALID_TRANSPORT)
-		THROW ( errno );
+		Throw errno;
 		
 	tcgetattr( tpt->fd, &options);
 	
@@ -93,10 +93,10 @@ void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
     n = read ( tpt->fd, ( void * )buffer, length );
    	
 		if( n == 0 )
-			THROW( ERR_NODATA );
+			Throw ERR_NODATA;
 		
     if( n < 0 )
-			THROW( errno );
+			Throw errno;
    
 		buffer += n;
     length -= n;
@@ -111,7 +111,7 @@ void transport_write_buffer (Transport *tpt, const u8 *buffer, int length)
 	n = write( tpt->fd, buffer,length );
 
   if ( n != length )
-		THROW ( errno );
+		Throw errno;
 }
 
 /* Check if data is available on connection without reading:
@@ -135,7 +135,7 @@ int transport_readable (Transport *tpt)
 	ret = select( tpt->fd+1, &rdfs, NULL, NULL, &tv );
 	
 	if ( ret < 0 )
-		THROW( errno );
+		Throw errno;
 		
   return ( ret > 0 );
 }

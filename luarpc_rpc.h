@@ -1,3 +1,5 @@
+#include "cexcept.h"
+
 /****************************************************************************/
 /* handle the differences between winsock and unix */
 
@@ -67,47 +69,8 @@ enum {
 	ERR_BADFNAME = MAXINT - 104
 };
 
-
-/****************************************************************************/
-/* exception handling using setjmp()/longjmp().
- *
- * do this:
- *
- *  TRY {
- *    some_stuff();
- *    THROW (error_code);
- *    // if THROW is not called, you must call ENDTRY before the end of
- *    // the TRY block (this includes before any `return' is called).
- *    ENDTRY;
- *  }
- *  CATCH {
- *    // *all* errors caught here, not just specific ones
- *    there_is_an_error (ERRCODE);
- *    if (dont_handle_here()) THROW (ERRCODE);
- *  }
- */
-
-/* the exception stack. the top of the stack is the environment to longjmp()
- * to if there is a THROW.
- */
-
-#define MAX_NESTED_TRYS 4
-
-#define THROW(errnum) exception_throw (errnum)
-
-#define ERRCODE (exception_errnum)
-
-#define TRY \
-  MYASSERT( exception_num_trys < MAX_NESTED_TRYS ); \
-  exception_num_trys++; \
-  if( setjmp( exception_stack[ exception_num_trys-1 ] ) == 0 )
-
-#define ENDTRY { \
-  MYASSERT (exception_num_trys > 0); \
-  exception_num_trys--; \
-}
-
-#define CATCH else
+define_exception_type(int);
+extern struct exception_context the_exception_context[1];
 
 #define NUM_FUNCNAME_CHARS 4
 
@@ -159,13 +122,11 @@ typedef struct _ServerHandle ServerHandle;
 #define SYNC_FLAG (0x7e)
 
 #define TRANSPORT_VERIFY_OPEN \
-	if (tpt->fd == INVALID_TRANSPORT) THROW (ERR_CLOSED);
+	if (tpt->fd == INVALID_TRANSPORT) Throw ERR_CLOSED;
 
 /* Arg & Error Checking Provided to Transport Mechanisms */
 int check_num_args (lua_State *L, int desired_n);
 void deal_with_error (lua_State *L, Handle *h, const char *error_string);
-void exception_throw (int n);
-
 
 /* TRANSPORT API */
 
