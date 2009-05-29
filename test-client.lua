@@ -14,12 +14,12 @@ tab = {a=1.4142, b=2};
 
 function doStuff()
 	-- set the default error handler for all handles
-	rpc_on_error (error_handler);
+	rpc.on_error (error_handler);
 	io.write ("error set\n")
 
-	-- local slave,err = rpc_connect ("localhost",12345);
-	local slave,err = rpc_connect ("/dev/ttys0");
-	-- local slave,err = rpc_connect ("/dev/pts/4");
+	-- local slave,err = rpc.connect ("localhost",12345);
+	local slave,err = rpc.connect ("/dev/ttys0");
+	-- local slave,err = rpc.connect ("/dev/pts/4");
 	if not slave then
 		io.write ("error: " .. err .. "\n");
 		exit();
@@ -28,7 +28,7 @@ function doStuff()
 	io.write ("connected\n")
 
 	-- set the error handler for a specific handle
-	--rpc_on_error (slave,error_handler);
+	--rpc.on_error (slave,error_handler);
 
 	-- trigger some errors
 	slave.a_bad_function (1,2,3,4,5);
@@ -64,7 +64,7 @@ function doStuff()
 
 	slave.print ("hello there\n");
 
-	rpc_close (slave);
+	rpc.close (slave);
 
 	-- RPC_call (slave,"a");		-- should trigger an error
 

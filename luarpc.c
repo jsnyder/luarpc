@@ -1049,6 +1049,19 @@ static const luaL_reg rpc_server_handle[] =
   { NULL,   NULL    }
 };
 
+static const luaL_reg rpc_map[] =
+{
+	{ "connect", rpc_connect },
+	{ "close", rpc_close },
+	{ "server", rpc_server },
+	{ "on_error", rpc_on_error },
+	{ "listen", rpc_listen },
+	{ "peek", rpc_peek },
+	{ "dispatch", rpc_dispatch },
+	{ "rpc_async", rpc_async },
+	{ NULL, NULL }
+};
+
 
 LUALIB_API int luaopen_luarpc(lua_State *L)
 {
@@ -1059,14 +1072,7 @@ LUALIB_API int luaopen_luarpc(lua_State *L)
 	started = 1;
 
   net_startup( );
-  lua_register( L, "rpc_connect", rpc_connect );
-  lua_register( L, "rpc_close", rpc_close );
-  lua_register( L, "rpc_server", rpc_server );
-  lua_register( L, "rpc_on_error", rpc_on_error );
-  lua_register( L, "rpc_listen", rpc_listen );
-  lua_register( L, "rpc_peek", rpc_peek );
-  lua_register( L, "rpc_dispatch", rpc_dispatch );
-  lua_register( L, "rpc_async", rpc_async );
+  luaL_register( L, "rpc", rpc_map );
 
   luaL_newmetatable( L, "rpc.helper" );
   luaL_openlib( L, NULL, rpc_helper, 0 );

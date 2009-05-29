@@ -32,18 +32,18 @@ testvar = 23
 
 io.write ("server started\n")
 
-rpc_server ("/dev/ptys0"); -- use for serial mode
--- rpc_server ("/dev/ptmx"); -- use for serial mode
--- rpc_server (12345); -- use for socket mode
+rpc.server ("/dev/ptys0"); -- use for serial mode
+-- rpc.server ("/dev/ptmx"); -- use for serial mode
+-- rpc.server (12345); -- use for socket mode
 
 -- an alternative way
 
 --count = 0;
---handle = rpc_listen (12345);
+--handle = rpc.listen (12345);
 --while 1 do
---	if rpc_peek (handle) then
+--	if rpc.peek (handle) then
 --		io.write ("dispatch\n")
---		rpc_dispatch (handle)
+--		rpc.dispatch (handle)
 --	else
 --		io.write ("do dee do " .. count .. "...\n")
 --	end
