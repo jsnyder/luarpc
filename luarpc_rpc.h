@@ -64,13 +64,21 @@
 enum {
   ERR_EOF      = MAXINT - 100,  /* reached end of file on transport */
   ERR_CLOSED   = MAXINT - 101,  /* attempted operation on closed transport */
-  ERR_PROTOCOL = MAXINT - 102, /* some error in the received protocol */
+  ERR_PROTOCOL = MAXINT - 102,  /* some error in the received protocol */
 	ERR_NODATA	 = MAXINT - 103,
 	ERR_BADFNAME = MAXINT - 104
 };
 
-define_exception_type(int);
-extern struct exception_context the_exception_context[1];
+enum exception_type { done, nonfatal, fatal };
+
+struct exception {
+  enum exception_type type;
+	int errnum;
+};
+
+define_exception_type(struct exception);
+
+extern struct exception_context the_exception_context[ 1 ];
 
 #define NUM_FUNCNAME_CHARS 4
 

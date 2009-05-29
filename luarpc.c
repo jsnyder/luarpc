@@ -479,7 +479,7 @@ static int handle_index (lua_State *L)
 
 static int helper_function (lua_State *L)
 {
-  int e;
+  struct exception e;
   int freturn = 0;
   Helper *h;
   Transport *tpt;
@@ -569,13 +569,13 @@ static int helper_function (lua_State *L)
       freturn = 0;
     }
   }
-  Catch (e)
+  Catch( e )
   {
-    if ( e == ERR_CLOSED )
+    if ( e.errnum == ERR_CLOSED )
       my_lua_error( L, "can't refer to a remote function after the handle has been closed" );
     else
     {
-      deal_with_error( L, h->handle, errorString( e ) );
+      deal_with_error( L, h->handle, errorString( e.errnum ) );
       transport_close( tpt );
     }
     return 0;
@@ -620,7 +620,7 @@ static void server_handle_destroy( ServerHandle *h )
 
 static int rpc_connect( lua_State *L )
 {
-  int e;
+  struct exception e;
   Handle *handle = 0;
   
   Try
@@ -797,7 +797,7 @@ static void read_function_call( Transport *tpt, lua_State *L )
 
 static ServerHandle *rpc_listen_helper( lua_State *L )
 {
-  int e;
+  struct exception e;
   ServerHandle *handle = 0;
 
   Try
@@ -875,7 +875,7 @@ static int rpc_peek (lua_State *L)
 
 static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
 {
-  int e;
+  struct exception e;
   
   Try 
   {
@@ -890,14 +890,23 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
           read_function_call( &handle->atpt, L );
         }
       }
-      Catch (e)
+      Catch( e )
       {
         /* if the client has closed the connection, close our side
          * gracefully too.
          */
         transport_close( &handle->atpt );
-        if( e != ERR_EOF && e != ERR_PROTOCOL )
-          Throw( e );
+				switch( e.type )
+				{
+					case fatal:
+						Throw( e );
+						
+					case nonfatal:
+						break;
+						
+					default: 
+						Throw( e );
+				}
       }
     }
     else
@@ -921,14 +930,18 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
       }
     }
   }
-  Catch (e)
+  Catch( e )
   {
-    /* If exception is non-fatal, don't die.  Otherwise deal with error. */
-    if( e != ERR_NODATA ) 
-    {
-      server_handle_shutdown( handle );
-      deal_with_error( L, 0, errorString( e ) );
-    }
+		switch( e.type )
+		{
+			case fatal:
+				server_handle_shutdown( handle );
+				deal_with_error( L, 0, errorString( e.errnum ) );
+			case nonfatal:
+				break;
+			default:
+        Throw( e );
+		}
   }
 }
 
