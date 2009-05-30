@@ -19,7 +19,7 @@
 #include "config.h"
 #include "luarpc_rpc.h"
 
-struct exception_context the_exception_context[1];
+struct exception_context the_exception_context[ 1 ];
 
 static void errorMessage (const char *msg, va_list ap)
 {
@@ -92,6 +92,7 @@ static void transport_write_string( Transport *tpt, const char *buffer, int leng
 static u8 transport_read_u8( Transport *tpt )
 {
   u8 b;
+	struct exception e;
   TRANSPORT_VERIFY_OPEN;
   transport_read_buffer( tpt, &b, 1 );
   return b;
@@ -102,7 +103,7 @@ static u8 transport_read_u8( Transport *tpt )
 
 static void transport_write_u8( Transport *tpt, u8 x )
 {
-  int n;
+	struct exception e;
   TRANSPORT_VERIFY_OPEN;
   transport_write_buffer (tpt,&x,1);
 }
@@ -114,6 +115,7 @@ static u32 transport_read_u32( Transport *tpt )
 {
   u8 b[4];
   u32 i;
+	struct exception e;
   TRANSPORT_VERIFY_OPEN;
   transport_read_buffer ( tpt, b, 4 );
   i = ( b[ 0 ] << 24 ) | (b[ 1 ] << 16 ) | ( b[ 2 ] << 8) | b[ 3 ];
@@ -126,7 +128,7 @@ static u32 transport_read_u32( Transport *tpt )
 static void transport_write_u32 (Transport *tpt, u32 x)
 {
   u8 b[4];
-  int n;
+	struct exception e;
   TRANSPORT_VERIFY_OPEN;
   b[0] = x >> 24;
   b[1] = x >> 16;
@@ -147,6 +149,7 @@ union DoubleBytes {
 static double transport_read_double (Transport *tpt)
 {
   union DoubleBytes double_bytes;
+	struct exception e;
   TRANSPORT_VERIFY_OPEN;
   /* @@@ handle endianness */
   transport_read_buffer ( tpt,double_bytes.b, 8 );
@@ -160,6 +163,7 @@ static void transport_write_double (Transport *tpt, double x)
 {
   int n;
   union DoubleBytes double_bytes;
+	struct exception e;
   TRANSPORT_VERIFY_OPEN;
   /* @@@ handle endianness */
   double_bytes.d = x;
@@ -361,6 +365,7 @@ static void read_table (Transport *tpt, lua_State *L)
 
 static int read_variable (Transport *tpt, lua_State *L)
 {
+	struct exception e;
   u8 type = transport_read_u8 (tpt);
 
   switch( type )
@@ -395,7 +400,9 @@ static int read_variable (Transport *tpt, lua_State *L)
       return 0;
 
     default:
-      Throw( ERR_PROTOCOL ); /* unknown type in request */
+			e.errnum = ERR_PROTOCOL;
+			e.type = fatal;
+      Throw( e );
   }
   return 1;
 }
@@ -637,9 +644,9 @@ static int rpc_connect( lua_State *L )
     header[4] = RPC_PROTOCOL_VERSION;
     transport_write_string( &handle->tpt, header, sizeof( header ) );
   }
-  Catch (e)
+  Catch( e )
   {     
-    deal_with_error( L, 0, errorString( e ) );
+    deal_with_error( L, 0, errorString( e.errnum ) );
     lua_pushnil( L );
   }
   return 1;
@@ -808,12 +815,12 @@ static ServerHandle *rpc_listen_helper( lua_State *L )
     /* make listening transport */
     transport_open_listener( L, handle );
   }
-  Catch (e)
+  Catch( e )
   {
     if( handle )
       server_handle_destroy( handle );
     
-    deal_with_error( L, 0, errorString( e ) );
+    deal_with_error( L, 0, errorString( e.errnum ) );
     return 0;
   }
   return handle;
@@ -874,9 +881,9 @@ static int rpc_peek (lua_State *L)
 
 
 static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
-{
+{  
   struct exception e;
-  
+
   Try 
   {
     /* if accepting transport is open, read function calls */

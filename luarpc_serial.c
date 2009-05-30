@@ -30,11 +30,16 @@ void transport_init (Transport *tpt)
 void transport_open( Transport *tpt, const char *path )
 {
 	struct termios options;
+	struct exception e;
 	
 	tpt->fd = open(path , O_RDWR | O_NOCTTY );
 	
 	if( tpt->fd == INVALID_TRANSPORT)
-		Throw( errno );
+	{
+		e.errnum = errno;
+		e.type = fatal;
+		Throw( e );
+	}
 		
 	tcgetattr( tpt->fd, &options);
 	
@@ -86,6 +91,7 @@ void transport_accept (Transport *tpt, Transport *atpt)
 void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
 {
 	int n;
+	struct exception e;
 	
 	while( length > 0 )
 	{
@@ -93,10 +99,18 @@ void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
     n = read ( tpt->fd, ( void * )buffer, length );
    	
 		if( n == 0 )
-			Throw( ERR_NODATA );
+		{
+			e.errnum = ERR_NODATA;
+			e.type = nonfatal;
+			Throw( e );
+		}
 		
     if( n < 0 )
-			Throw( errno );
+		{
+			e.errnum = errno;
+			e.type = fatal;
+			Throw( e );
+		}
    
 		buffer += n;
     length -= n;
@@ -106,18 +120,24 @@ void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
 void transport_write_buffer (Transport *tpt, const u8 *buffer, int length)
 {
 	int n;
+	struct exception e;
   TRANSPORT_VERIFY_OPEN;
  
 	n = write( tpt->fd, buffer,length );
 
   if ( n != length )
-		Throw( errno );
+	{
+		e.errnum = errno;
+		e.type = fatal;
+		Throw( e );
+	}
 }
 
 /* Check if data is available on connection without reading:
  		- 1 = data available, 0 = no data available */
 int transport_readable (Transport *tpt)
 {
+	struct exception e;
 	fd_set rdfs;
   int ret, bytes;
   struct timeval tv;
@@ -135,7 +155,11 @@ int transport_readable (Transport *tpt)
 	ret = select( tpt->fd+1, &rdfs, NULL, NULL, &tv );
 	
 	if ( ret < 0 )
-		Throw( errno );
+	{
+		e.errnum = errno;
+		e.type = fatal;
+		Throw( e );
+	}
 		
   return ( ret > 0 );
 }

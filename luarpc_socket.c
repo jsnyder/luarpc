@@ -192,9 +192,14 @@ int transport_is_open (Transport *tpt)
 
 void transport_open (Transport *tpt)
 {
+	struct exception e;
   tpt->fd = socket (PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (tpt->fd == INVALID_TRANSPORT) 
-		Throw( sock_errno );
+	{
+		e.errnum = sock_errno;
+		e.type = fatal;
+		Throw( e );
+	}
 }
 
 /* close a socket */
@@ -210,13 +215,18 @@ void transport_close (Transport *tpt)
 
 static void transport_connect (Transport *tpt, u32 ip_address, u16 ip_port)
 {
+	struct exception e;
   struct sockaddr_in myname;
   TRANSPORT_VERIFY_OPEN;
   myname.sin_family = AF_INET;
   myname.sin_port = htons (ip_port);
   myname.sin_addr.s_addr = htonl (ip_address);
   if (connect (tpt->fd, (struct sockaddr *) &myname, sizeof (myname)) != 0)
-    Throw( sock_errno );
+  {
+		e.errnum = sock_errno;
+		e.type = fatal;
+		Throw( e );
+	}
 }
 
 
@@ -224,13 +234,18 @@ static void transport_connect (Transport *tpt, u32 ip_address, u16 ip_port)
 
 static void transport_bind (Transport *tpt, u32 ip_address, u16 ip_port)
 {
+	struct exception e;
   struct sockaddr_in myname;
   TRANSPORT_VERIFY_OPEN;
   myname.sin_family = AF_INET;
   myname.sin_port = htons (ip_port);
   myname.sin_addr.s_addr = htonl (ip_address);
   if (bind (tpt->fd, (struct sockaddr *) &myname, sizeof (myname)) != 0)
-    Throw( sock_errno );
+  {
+		e.errnum = sock_errno;
+		e.type = fatal;
+		Throw( e );
+	}
 }
 
 
@@ -240,9 +255,14 @@ static void transport_bind (Transport *tpt, u32 ip_address, u16 ip_port)
 
 static void transport_listen (Transport *tpt, int maxcon)
 {
+	struct exception e;
   TRANSPORT_VERIFY_OPEN;
   if (listen (tpt->fd,maxcon) != 0)
- 		Throw( sock_errno );
+ 	{
+		e.errnum = sock_errno;
+		e.type = fatal;
+		Throw( e );
+	}
 }
 
 
@@ -251,13 +271,18 @@ static void transport_listen (Transport *tpt, int maxcon)
 
 void transport_accept (Transport *tpt, Transport *atpt)
 {
+	struct exception e;
   struct sockaddr_in clientname;
   size_t namesize;
   TRANSPORT_VERIFY_OPEN;
   namesize = sizeof (clientname);
   atpt->fd = accept (tpt->fd, (struct sockaddr*) &clientname, &namesize);
   if (atpt->fd == INVALID_TRANSPORT) 
-		Throw( sock_errno );
+	{
+		e.errnum = sock_errno;
+		e.type = fatal;
+		Throw( e );
+	}
 }
 
 
@@ -265,13 +290,24 @@ void transport_accept (Transport *tpt, Transport *atpt)
 
 void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
 {
+	struct exception e;
   TRANSPORT_VERIFY_OPEN;
   while (length > 0) {
     int n = read (tpt->fd,(void*) buffer,length);
     if (n == 0) 
-			Throw( ERR_EOF );
+		{
+			e.errnum = ERR_EOF;
+			e.type = nonfatal;
+			Throw( e );
+		}
+		
     if (n < 0) 
-			Throw( sock_errno );
+		{
+			e.errnum = sock_errno;
+			e.type = fatal;
+			Throw( e );
+		}
+		
     buffer += n;
     length -= n;
   }
@@ -281,11 +317,16 @@ void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
 
 void transport_write_buffer (Transport *tpt, const u8 *buffer, int length)
 {
+	struct exception e;
   int n;
   TRANSPORT_VERIFY_OPEN;
   n = write (tpt->fd,buffer,length);
   if (n != length) 
-		Throw( sock_errno );
+	{
+		e.errnum = sock_errno;
+		e.type = fatal;
+		Throw( e );
+	}
 }
 
 int transport_open_connection(lua_State *L, Handle *handle)

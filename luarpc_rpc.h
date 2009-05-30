@@ -85,7 +85,8 @@ extern struct exception_context the_exception_context[ 1 ];
 /* Transport Connection Structure */
 
 /* FIXME: should be cleaner */
-struct _Transport {
+struct _Transport 
+{
 #ifdef LUARPC_ENABLE_SOCKET
   SOCKTYPE fd;      /* INVALID_TRANSPORT if socket is closed */
 #endif
@@ -101,7 +102,8 @@ struct _Transport {
 typedef struct _Transport Transport;
 
 
-struct _Handle {
+struct _Handle 
+{
   int refcount;     /* delete the object when this goes to 0 */
   Transport tpt;      /* the handle socket */
   int error_handler;    /* function reference */
@@ -130,7 +132,12 @@ typedef struct _ServerHandle ServerHandle;
 #define SYNC_FLAG (0x7e)
 
 #define TRANSPORT_VERIFY_OPEN \
-	if (tpt->fd == INVALID_TRANSPORT) Throw ERR_CLOSED;
+	if (tpt->fd == INVALID_TRANSPORT) \
+	{ \
+		e.errnum = ERR_CLOSED; \
+		e.type = fatal; \
+		Throw( e ); \
+	}
 
 /* Arg & Error Checking Provided to Transport Mechanisms */
 int check_num_args (lua_State *L, int desired_n);
