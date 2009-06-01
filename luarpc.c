@@ -633,9 +633,12 @@ static int rpc_connect( lua_State *L )
   Try
   {
     char header[ 5 ];
+		printf("Pre handle\n");
     handle = handle_create (L );
+		printf("Post handle\n");
     transport_open_connection( L, handle );
-    
+		printf("Post-open-connection\n");
+
     /* write the protocol header */
     header[0] = 'L';
     header[1] = 'R';
@@ -643,6 +646,7 @@ static int rpc_connect( lua_State *L )
     header[3] = 'C';
     header[4] = RPC_PROTOCOL_VERSION;
     transport_write_string( &handle->tpt, header, sizeof( header ) );
+		printf("post-wrote-string\n");
   }
   Catch( e )
   {     
@@ -1028,11 +1032,6 @@ static const luaL_reg rpc_helper[] =
   { NULL, NULL }
 };
 
-static const luaL_reg rpc_server_handle[] =
-{
-  { NULL, NULL }
-};
-
 static const luaL_reg rpc_map[] =
 {
   { "connect", rpc_connect },
@@ -1059,13 +1058,12 @@ LUALIB_API int luaopen_luarpc(lua_State *L)
   luaL_register( L, "rpc", rpc_map );
 
   luaL_newmetatable( L, "rpc.helper" );
-  luaL_openlib( L, NULL, rpc_helper, 0 );
+  luaL_register( L, NULL, rpc_helper );
   
   luaL_newmetatable( L, "rpc.handle" );
-  luaL_openlib( L, NULL, rpc_handle, 0 );
+  luaL_register( L, NULL, rpc_handle );
   
   luaL_newmetatable( L, "rpc.server_handle" );
-  luaL_openlib( L, NULL, rpc_server_handle, 0 );
 
   if ( sizeof( double ) != 8 )
     debug ( "internal error: sizeof(double) != 8" );

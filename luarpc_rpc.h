@@ -158,7 +158,7 @@ int transport_open_connection(lua_State *L, Handle *handle);
 void transport_accept (Transport *tpt, Transport *atpt);
 
 /* Read & Write to Transport */
-void transport_read_buffer (Transport *tpt, const u8 *buffer, int length);
+void transport_read_buffer (Transport *tpt, u8 *buffer, int length);
 void transport_write_buffer (Transport *tpt, const u8 *buffer, int length);
 
 /* Check if data is available on connection without reading:

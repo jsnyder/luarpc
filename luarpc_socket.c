@@ -288,7 +288,7 @@ void transport_accept (Transport *tpt, Transport *atpt)
 
 /* read from the socket into a buffer */
 
-void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
+void transport_read_buffer (Transport *tpt, u8 *buffer, int length)
 {
 	struct exception e;
   TRANSPORT_VERIFY_OPEN;

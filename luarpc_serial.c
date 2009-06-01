@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
 #include <sys/time.h>
@@ -11,6 +12,8 @@
 #include <errno.h>
 #include <string.h>
 #include <alloca.h>
+
+/* FIXME:  I know not all of the above is necessary, should pare it down sometime */
 
 #include "lua.h"
 #include "lualib.h"
@@ -32,7 +35,7 @@ void transport_open( Transport *tpt, const char *path )
 	struct termios options;
 	struct exception e;
 	
-	tpt->fd = open(path , O_RDWR | O_NOCTTY );
+	tpt->fd = open(path , O_RDWR | O_NOCTTY | O_NDELAY );
 	
 	if( tpt->fd == INVALID_TRANSPORT)
 	{
@@ -83,12 +86,13 @@ int transport_open_connection(lua_State *L, Handle *handle)
 /* Accept Connection */
 void transport_accept (Transport *tpt, Transport *atpt)
 {
+	struct exception e;
 	TRANSPORT_VERIFY_OPEN;
 	atpt->fd = tpt->fd;
 }
 
 /* Read & Write to Transport */
-void transport_read_buffer (Transport *tpt, const u8 *buffer, int length)
+void transport_read_buffer (Transport *tpt, u8 *buffer, int length)
 {
 	int n;
 	struct exception e;

@@ -32,9 +32,9 @@ testvar = 23
 
 io.write ("server started\n")
 
--- rpc.server ("/dev/ptys0"); -- use for serial mode
+rpc.server ("/dev/ptys0"); -- use for serial mode
 -- rpc.server ("/dev/ptmx"); -- use for serial mode
-rpc.server (12345); -- use for socket mode
+-- rpc.server (12345); -- use for socket mode
 
 -- an alternative way
 
