@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <fcntl.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
 #include <sys/time.h>
@@ -79,7 +78,7 @@ int transport_open_connection(lua_State *L, Handle *handle)
     my_lua_error (L,"first argument must be serial serial port");
 
 	transport_open( &handle->tpt, lua_tostring (L,1) );
-
+	
 	return 1;
 }
 
@@ -96,11 +95,12 @@ void transport_read_buffer (Transport *tpt, u8 *buffer, int length)
 {
 	int n;
 	struct exception e;
+	TRANSPORT_VERIFY_OPEN;
 	
 	while( length > 0 )
 	{
 		TRANSPORT_VERIFY_OPEN;
-    n = read ( tpt->fd, ( void * )buffer, length );
+    n = read( tpt->fd, ( void * )buffer, length );
    	
 		if( n == 0 )
 		{
@@ -119,6 +119,19 @@ void transport_read_buffer (Transport *tpt, u8 *buffer, int length)
 		buffer += n;
     length -= n;
   }
+/*
+	read( tpt->fd, ( u8 * )schar, 1 );
+	
+	if ( schar != SYNC_FLAG )
+	{
+		e.errnum = ERR_PROTOCOL;
+		e.type = nonfatal;
+		printf("Bad read!\n");
+		Throw( e );
+	}
+	
+	printf("Got it!\n");
+	*/
 }
 
 void transport_write_buffer (Transport *tpt, const u8 *buffer, int length)
@@ -126,8 +139,12 @@ void transport_write_buffer (Transport *tpt, const u8 *buffer, int length)
 	int n;
 	struct exception e;
   TRANSPORT_VERIFY_OPEN;
- 
+
+	/* write( tpt->fd, &schar, 1); */
+
 	n = write( tpt->fd, buffer,length );
+	
+	/* write( tpt->fd, &schar, 1); */
 
   if ( n != length )
 	{

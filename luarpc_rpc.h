@@ -43,10 +43,10 @@
 
 #ifndef NDEBUG
 #ifdef __GNUC__
-#define MYASSERT(a) if (!(a)) debug ( \
+#define MYASSERT(a) if (!(a)) rpcdebug ( \
   "assertion \"" #a "\" failed in %s() [%s]",__FUNCTION__,__FILE__);
 #else
-#define MYASSERT(a) if (!(a)) debug ( \
+#define MYASSERT(a) if (!(a)) rpcdebug ( \
   "assertion \"" #a "\" failed in %s:%d",__FILE__,__LINE__);
 #endif
 #else
@@ -80,7 +80,7 @@ define_exception_type(struct exception);
 
 extern struct exception_context the_exception_context[ 1 ];
 
-#define NUM_FUNCNAME_CHARS 4
+#define NUM_FUNCNAME_CHARS 20
 
 /* Transport Connection Structure */
 
@@ -104,7 +104,6 @@ typedef struct _Transport Transport;
 
 struct _Handle 
 {
-  int refcount;     /* delete the object when this goes to 0 */
   Transport tpt;      /* the handle socket */
   int error_handler;    /* function reference */
   int async;      /* nonzero if async mode being used */
@@ -123,9 +122,12 @@ typedef struct _Helper Helper;
 struct _ServerHandle {
   Transport ltpt;   /* listening socket, always valid if no error */
   Transport atpt;   /* accepting socket, valid if connection established */
+	int framing_errs;
 };
 typedef struct _ServerHandle ServerHandle;
 
+/* Maximum number of framing errors before connection reset */
+#define MAX_FRAMING_ERRS ( 2 )
 
 #define INVALID_TRANSPORT (-1)
 

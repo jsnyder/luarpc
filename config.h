@@ -2,7 +2,10 @@
 #ifndef __LUARPC_CONFIG_H__
 #define __LUARPC_CONFIG_H__
 
-/*#define LUARPC_ENABLE_SOCKET */
+#define BUILD_LUARPC
+#define LUARPC_STANDALONE
+
+/* #define LUARPC_ENABLE_SOCKET */
 /* #define LUARPC_ENABLE_FIFO  -- not implemented!!! */
 #define LUARPC_ENABLE_SERIAL
 
