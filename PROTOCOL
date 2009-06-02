@@ -22,8 +22,13 @@ Protocol Definition
 session:
 	"LRPC"				-- "lua remote function protocol"
 	u8						-- protocol version
-	function_call, function_call, ...
+	command, command, command, ...
 	<end_of_file>
+
+command:
+	u8						-- command type (RPC_CMD_*)
+									 01 - function_call
+									 02 - remote_index
 
 function_call:
 	string				-- name of function

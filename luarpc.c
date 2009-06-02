@@ -694,7 +694,7 @@ static int helper_index( lua_State *L )
     /* write number of arguments */
     n = lua_gettop( L );
     transport_write_u32( tpt, n - 1 );
-    
+    /* STOPPED POINT */
     /* if we're in async mode, we're done */
     if ( h->handle->async )
     {
