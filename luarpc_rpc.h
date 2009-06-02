@@ -66,7 +66,8 @@ enum {
   ERR_CLOSED   = MAXINT - 101,  /* attempted operation on closed transport */
   ERR_PROTOCOL = MAXINT - 102,  /* some error in the received protocol */
 	ERR_NODATA	 = MAXINT - 103,
-	ERR_BADFNAME = MAXINT - 104
+	ERR_BADFNAME = MAXINT - 104,
+	ERR_DATALINK = MAXINT - 105
 };
 
 enum exception_type { done, nonfatal, fatal };
@@ -131,7 +132,9 @@ typedef struct _ServerHandle ServerHandle;
 
 #define INVALID_TRANSPORT (-1)
 
-#define SYNC_FLAG (0x7e)
+#define HEAD_BYTE (0x7e)
+
+#define TAIL_BYTE (0x7f)
 
 #define TRANSPORT_VERIFY_OPEN \
 	if (tpt->fd == INVALID_TRANSPORT) \

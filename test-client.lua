@@ -32,7 +32,7 @@ function doStuff()
 	--rpc.on_error (slave,error_handler);
 
 	-- trigger some errors
-	slave.a_bad_function (1,2,3,4,5);
+	-- slave.a_bad_function (1,2,3,4,5);
 
 	slave.foo3();
 
