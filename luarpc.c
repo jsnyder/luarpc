@@ -248,7 +248,7 @@ enum {
 enum
 {
 	RPC_CMD_CALL = 1,
-	RPC_CMD_INDEX
+	RPC_CMD_GET
 };
 
 enum { RPC_PROTOCOL_VERSION = 3 };
@@ -524,6 +524,7 @@ static Helper * helper_create( lua_State *L, Handle *handle, const char *funcnam
   luaL_getmetatable( L, "rpc.helper" );
   lua_setmetatable( L, -2 );
   h->handle = handle;
+	h->lname = h->funcname;
   strncpy ( h->funcname, funcname, NUM_FUNCNAME_CHARS );
   return h;
 }
@@ -551,9 +552,7 @@ static int handle_index (lua_State *L)
 }
 
 
-
-
-static int helper_function (lua_State *L)
+static int helper_get( lua_State *L )
 {
   struct exception e;
   int freturn = 0;
@@ -570,80 +569,17 @@ static int helper_function (lua_State *L)
   {
     int i,len,n;
     u32 nret,ret_code;
-
-    /* first read out any pending return values for old async calls */
-    for (; h->handle->read_reply_count > 0; h->handle->read_reply_count--) {
-      ret_code = transport_read_u8 (tpt);   /* return code */
-      if (ret_code==0)
-      {
-        /* read return arguments, ignore everything we read */
-        nret = transport_read_u32 (tpt);
-        
-        for (i=0; i < ( ( int ) nret); i++)
-          read_variable (tpt,L);
-        
-        lua_pop (L,nret);
-      }
-      else
-      {
-        /* read error and handle it */
-        u32 code = transport_read_u32 (tpt);
-        u32 len = transport_read_u32 (tpt);
-        char *err_string = (char*) alloca (len+1);
-        transport_read_string( tpt, err_string, len );
-        err_string[ len ] = 0;
-
-        deal_with_error( L, h->handle, err_string );
-        freturn = 0;
-      }
-    }
-
+				
     /* write function name */
     len = strlen( h->funcname );
-		transport_write_u8( tpt, RPC_CMD_CALL );
+		transport_write_u8( tpt, RPC_CMD_GET );
     transport_write_u32 ( tpt, len );
     transport_write_string( tpt, h->funcname, len );
 
-    /* write number of arguments */
-    n = lua_gettop( L );
-    transport_write_u32( tpt, n - 1 );
-    
-    /* write each argument */
-    for( i = 2; i <= n; i ++ )
-      write_variable( tpt, L, i );
+		/* read variable back */
+    read_variable( tpt, L );
 
-    /* if we're in async mode, we're done */
-    if ( h->handle->async )
-    {
-      h->handle->read_reply_count++;
-      freturn = 0;
-    }
-
-    /* read return code */
-    ret_code = transport_read_u8( tpt );
-
-    if ( ret_code== 0 )
-    {
-      /* read return arguments */
-      nret = transport_read_u32( tpt );
-      
-      for ( i = 0; i < ( (int ) nret ); i ++ )
-        read_variable( tpt, L );
-      
-      freturn = ( int )nret;
-    }
-    else
-    {
-      /* read error and handle it */
-      u32 code = transport_read_u32( tpt );
-      u32 len = transport_read_u32( tpt );
-      char *err_string = ( char * )alloca( len + 1 );
-      transport_read_string( tpt, err_string, len );
-      err_string[ len ] = 0;
-
-      deal_with_error( L, h->handle, err_string );
-      freturn = 0;
-    }
+    freturn = 1;
   }
   Catch( e )
   {
@@ -669,6 +605,134 @@ static int helper_function (lua_State *L)
   return freturn;
 }
 
+
+static int helper_call (lua_State *L)
+{
+  struct exception e;
+  int freturn = 0;
+  Helper *h;
+  Transport *tpt;
+  MYASSERT( lua_gettop( L ) >= 1 );
+  MYASSERT( lua_isuserdata( L, 1 ) && ismetatable_type( L, 1, "rpc.helper" ) );
+  
+  /* get helper object and its transport */
+  h = ( Helper * )lua_touserdata( L, 1 );
+  tpt = &h->handle->tpt;
+	
+	
+	/* @@@ ugly way to capture get calls, should find another way */
+	if( strcmp("get", h->lname ) == 0 )
+	{
+		*(h->lname - 1) = '\0'; /* scrub .get */
+		helper_get( L );
+		freturn = 1;
+	}
+	else
+	{
+  	Try
+	  {
+	    int i,len,n;
+	    u32 nret,ret_code;
+
+	    /* first read out any pending return values for old async calls */
+	    for (; h->handle->read_reply_count > 0; h->handle->read_reply_count--) {
+	      ret_code = transport_read_u8 (tpt);   /* return code */
+	      if (ret_code==0)
+	      {
+	        /* read return arguments, ignore everything we read */
+	        nret = transport_read_u32 (tpt);
+        
+	        for (i=0; i < ( ( int ) nret); i++)
+	          read_variable (tpt,L);
+        
+	        lua_pop (L,nret);
+	      }
+	      else
+	      {
+	        /* read error and handle it */
+	        u32 code = transport_read_u32 (tpt);
+	        u32 len = transport_read_u32 (tpt);
+	        char *err_string = (char*) alloca (len+1);
+	        transport_read_string( tpt, err_string, len );
+	        err_string[ len ] = 0;
+
+	        deal_with_error( L, h->handle, err_string );
+	        freturn = 0;
+	      }
+	    }
+
+	    /* write function name */
+	    len = strlen( h->funcname );
+			transport_write_u8( tpt, RPC_CMD_CALL );
+	    transport_write_u32 ( tpt, len );
+	    transport_write_string( tpt, h->funcname, len );
+
+	    /* write number of arguments */
+	    n = lua_gettop( L );
+	    transport_write_u32( tpt, n - 1 );
+    
+	    /* write each argument */
+	    for( i = 2; i <= n; i ++ )
+	      write_variable( tpt, L, i );
+
+	    /* if we're in async mode, we're done */
+	    if ( h->handle->async )
+	    {
+	      h->handle->read_reply_count++;
+	      freturn = 0;
+	    }
+
+	    /* read return code */
+	    ret_code = transport_read_u8( tpt );
+
+	    if ( ret_code== 0 )
+	    {
+	      /* read return arguments */
+	      nret = transport_read_u32( tpt );
+      
+	      for ( i = 0; i < ( (int ) nret ); i ++ )
+	        read_variable( tpt, L );
+      
+	      freturn = ( int )nret;
+	    }
+	    else
+	    {
+	      /* read error and handle it */
+	      u32 code = transport_read_u32( tpt );
+	      u32 len = transport_read_u32( tpt );
+	      char *err_string = ( char * )alloca( len + 1 );
+	      transport_read_string( tpt, err_string, len );
+	      err_string[ len ] = 0;
+
+	      deal_with_error( L, h->handle, err_string );
+	      freturn = 0;
+	    }
+	  }
+	  Catch( e )
+	  {
+			switch( e.type )
+			{
+				case fatal:
+					if ( e.errnum == ERR_CLOSED )
+			      my_lua_error( L, "can't refer to a remote function after the handle has been closed" );
+					deal_with_error( L, h->handle, errorString( e.errnum ) );
+					transport_close( tpt );
+					break;
+				case nonfatal:
+					deal_with_error( L, h->handle, errorString( e.errnum ) );
+					lua_pushnil( L );
+					return 1;
+					break;
+				default:
+	        deal_with_error( L, h->handle, errorString( e.errnum ) );
+					transport_close( tpt );
+					break;
+			}
+	  }
+	}
+  return freturn;
+}
+
 static Helper * helper_append( lua_State *L, Helper *helper, const char *funcname )
 {
 	size_t plen;
@@ -678,11 +742,11 @@ static Helper * helper_append( lua_State *L, Helper *helper, const char *funcnam
   h->handle = helper->handle;
   strncpy( h->funcname, helper->funcname, NUM_FUNCNAME_CHARS );
 	plen = strlen( h->funcname );
+	h->lname = &h->funcname[ plen + 1 ];
 	strncat( h->funcname, ".", NUM_FUNCNAME_CHARS - plen );
 	strncat( h->funcname, funcname, NUM_FUNCNAME_CHARS - ( plen + 1 ) );
   return h;
 }
-
 
 /* indexing a handle returns a helper */
 static int helper_index (lua_State *L)
@@ -700,7 +764,7 @@ static int helper_index (lua_State *L)
 		my_lua_error( L, "function name is too long" );
 	
 	h = helper_append( L, ( Helper * )lua_touserdata( L, 1 ), s );
-  /* return the helper object */
+
   return 1;
 }
 
@@ -905,6 +969,39 @@ static void read_function_call( Transport *tpt, lua_State *L )
 }
 
 
+static void read_cmd_get( Transport *tpt, lua_State *L )
+{
+  int i;
+  u32 len;
+  char *funcname;
+	char *token = NULL;
+
+  /* read function name */
+  len = transport_read_u32( tpt ); /* function name string length */ 
+  funcname = ( char * )alloca( len + 1 );
+  transport_read_string( tpt, funcname, len );
+  funcname[ len ] = 0;
+
+  /* get function */
+	/* @@@ perhaps handle more like variables instead of using a long string? */
+	/* @@@ also strtok is not thread safe */
+	token = strtok( funcname, "." );
+	lua_getglobal( L, token );
+	token = strtok( NULL, "." );
+	while( token != NULL )
+	{
+		lua_getfield( L, -1, token );
+		token = strtok( NULL, "." );
+	}
+
+  /* return top value on stack */
+  write_variable( tpt, L, lua_gettop( L ) );
+
+  /* empty the stack */
+  lua_settop ( L, 0 );
+}
+
+
 static ServerHandle *rpc_listen_helper( lua_State *L )
 {
   struct exception e;
@@ -998,6 +1095,9 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
 				{
 					case RPC_CMD_CALL:
 						read_function_call( &handle->atpt, L );
+						break;
+					case RPC_CMD_GET:
+						read_cmd_get( &handle->atpt, L );
 						break;
 					default:
 						e.type = nonfatal;
@@ -1133,7 +1233,7 @@ static const luaL_reg rpc_handle[] =
 
 static const luaL_reg rpc_helper[] =
 {
-  { "__call", helper_function },
+  { "__call", helper_call },
   { "__index", helper_index },
   { NULL, NULL }
 };

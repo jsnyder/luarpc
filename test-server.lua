@@ -27,7 +27,9 @@ function foo3 (tab)
 	blah();
 end
 
-testvar = 23
+test = {1, 2, 3, 3.143, "234"}
+
+test.sval = 23
 
 
 io.write ("server started\n")

@@ -66,6 +66,14 @@ function doStuff()
 	
 	print(val)
 
+	testval = slave.test:get()
+	
+	print(testval["apple"])
+	
+	for i,v in pairs(testval) do print(i,v) end
+	
+	-- print(testval)
+
 	rpc.close (slave);
 end
 

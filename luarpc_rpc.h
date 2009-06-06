@@ -116,6 +116,7 @@ typedef struct _Handle Handle;
 struct _Helper {
   Handle *handle;     /* pointer to handle object */
   char funcname[NUM_FUNCNAME_CHARS];  /* name of the function */
+	char *lname; /* last name appended */
 };
 typedef struct _Helper Helper;
 
