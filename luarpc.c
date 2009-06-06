@@ -75,7 +75,8 @@ static const char * errorString (int n)
   switch (n) {
   case ERR_EOF: return "connection closed unexpectedly (\"end of file\")";
   case ERR_CLOSED: return "operation requested on a closed transport";
-  case ERR_PROTOCOL: return "error in the received Lua-RPC protocol";
+  case ERR_PROTOCOL: return "error in the received LuaRPC protocol";
+	case ERR_COMMAND: return "undefined RPC command";
 	case ERR_DATALINK: return "transmission error at data link level";
   case ERR_NODATA: return "no data received when attempting to read";
   case ERR_BADFNAME: return "function name is too long";
@@ -892,7 +893,7 @@ static int rpc_async (lua_State *L)
  * around the function call.
  */
 
-static void read_function_call( Transport *tpt, lua_State *L )
+static void read_cmd_call( Transport *tpt, lua_State *L )
 {
   int i, stackpos, good_function, nargs;
   u32 len;
@@ -1094,14 +1095,14 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
 				switch ( transport_read_u8( &handle->atpt ) )
 				{
 					case RPC_CMD_CALL:
-						read_function_call( &handle->atpt, L );
+						read_cmd_call( &handle->atpt, L );
 						break;
 					case RPC_CMD_GET:
 						read_cmd_get( &handle->atpt, L );
 						break;
 					default:
 						e.type = nonfatal;
-						e.errnum = ERR_PROTOCOL;
+						e.errnum = ERR_COMMAND;
 						Throw( e );
 				}
 				

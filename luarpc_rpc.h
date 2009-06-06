@@ -67,7 +67,8 @@ enum {
   ERR_PROTOCOL = MAXINT - 102,  /* some error in the received protocol */
 	ERR_NODATA	 = MAXINT - 103,
 	ERR_BADFNAME = MAXINT - 104,
-	ERR_DATALINK = MAXINT - 105
+	ERR_DATALINK = MAXINT - 105,
+	ERR_COMMAND  = MAXINT - 106
 };
 
 enum exception_type { done, nonfatal, fatal };
