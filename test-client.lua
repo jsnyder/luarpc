@@ -32,7 +32,7 @@ function doStuff()
 	--rpc.on_error (slave,error_handler);
 
 	-- trigger some errors
-	-- slave.a_bad_function (1,2,3,4,5);
+	-- slave.a_bad_function_name_too_long (1,2,3,4,5);
 
 	slave.foo3();
 
@@ -61,6 +61,10 @@ function doStuff()
 	xxx (tab);
 
 	slave.print ("hello there\n");
+	
+	val = slave.math.cos(2.1)
+	
+	print(val)
 
 	rpc.close (slave);
 

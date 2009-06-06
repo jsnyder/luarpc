@@ -123,12 +123,12 @@ typedef struct _Helper Helper;
 struct _ServerHandle {
   Transport ltpt;   /* listening socket, always valid if no error */
   Transport atpt;   /* accepting socket, valid if connection established */
-	int framing_errs;
+	int link_errs;
 };
 typedef struct _ServerHandle ServerHandle;
 
 /* Maximum number of framing errors before connection reset */
-#define MAX_FRAMING_ERRS ( 2 )
+#define MAX_LINK_ERRS ( 2 )
 
 #define INVALID_TRANSPORT (-1)
 
