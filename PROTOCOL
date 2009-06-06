@@ -28,7 +28,7 @@ session:
 command:
 	u8						-- command type (RPC_CMD_*)
 									 01 - function_call
-									 02 - remote_index
+									 XX - extensible as required
 
 function_call:
 	string				-- name of function
