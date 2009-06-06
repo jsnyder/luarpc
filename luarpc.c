@@ -604,8 +604,6 @@ static int helper_function (lua_State *L)
     transport_write_u32 ( tpt, len );
     transport_write_string( tpt, h->funcname, len );
 
-		printf("Going to call: %s\n", h->funcname);
-
     /* write number of arguments */
     n = lua_gettop( L );
     transport_write_u32( tpt, n - 1 );
@@ -845,6 +843,7 @@ static void read_function_call( Transport *tpt, lua_State *L )
 
   /* get function */
 	/* @@@ perhaps handle more like variables instead of using a long string? */
+	/* @@@ also strtok is not thread safe */
 	token = strtok( funcname, "." );
 	lua_getglobal( L, token );
 	token = strtok( NULL, "." );
