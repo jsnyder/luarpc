@@ -249,7 +249,8 @@ enum {
 enum
 {
 	RPC_CMD_CALL = 1,
-	RPC_CMD_GET
+	RPC_CMD_GET,
+	RPC_CMD_CON
 };
 
 enum { RPC_PROTOCOL_VERSION = 3 };
@@ -638,12 +639,12 @@ static int helper_call (lua_State *L)
 	    /* first read out any pending return values for old async calls */
 	    for (; h->handle->read_reply_count > 0; h->handle->read_reply_count--) {
 	      ret_code = transport_read_u8 (tpt);   /* return code */
-	      if (ret_code==0)
+	      if( ret_code == 0 )
 	      {
 	        /* read return arguments, ignore everything we read */
-	        nret = transport_read_u32 (tpt);
+	        nret = transport_read_u32( tpt );
         
-	        for (i=0; i < ( ( int ) nret); i++)
+	        for (i=0; i < ( ( int ) nret ); i++)
 	          read_variable (tpt,L);
         
 	        lua_pop (L,nret);
@@ -815,10 +816,12 @@ static int rpc_connect( lua_State *L )
   
   Try
   {
-		handle = handle_create (L );
+		handle = handle_create ( L );
 	  transport_open_connection( L, handle );
-	
-		write_header( &handle->tpt);
+		
+		transport_write_u8( &handle->tpt, RPC_CMD_CON );
+		write_header( &handle->tpt );
+		read_header( &handle->tpt );
   }
   Catch( e )
   {     
@@ -1100,6 +1103,10 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
 					case RPC_CMD_GET:
 						read_cmd_get( &handle->atpt, L );
 						break;
+					case RPC_CMD_CON: /*  @@@ allow client to "reconnect", should support better mechanism */
+						read_header( &handle->atpt );
+						write_header( &handle->atpt );
+						break;
 					default:
 						e.type = nonfatal;
 						e.errnum = ERR_COMMAND;
@@ -1139,10 +1146,19 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
       /* if accepting transport is not open, accept a new connection from the
        * listening transport.
        */
-      transport_accept( &handle->ltpt, &handle->atpt );
+			transport_accept( &handle->ltpt, &handle->atpt );
 			
-      /* check that the header is ok -- throws an exception if header is bad */
-			read_header( &handle->atpt );
+			switch ( transport_read_u8( &handle->atpt ) )
+			{
+				case RPC_CMD_CON:
+					read_header( &handle->atpt );
+					write_header( &handle->atpt );
+					break;
+				default: /* connection must be established to issue any other commands */
+					e.type = nonfatal;
+					e.errnum = ERR_COMMAND;
+					Throw( e );
+			}
     }
   }
   Catch( e )
@@ -1226,6 +1242,67 @@ static int rpc_on_error( lua_State *L )
 /****************************************************************************/
 /* register RPC functions */
 
+
+
+#ifndef LUARPC_STANDALONE
+
+#define MIN_OPT_LEVEL 2
+#include "lrodefs.h"
+
+const LUA_REG_TYPE rpc_handle[] =
+{
+  { LSTRKEY( "__index" ), LFUNCVAL( handle_index ) },
+  { LNILKEY, LNILVAL }
+};
+
+const LUA_REG_TYPE rpc_helper[] =
+{
+  { LSTRKEY( "__call" ), LFUNCVAL( helper_call ) },
+  { LSTRKEY( "__index" ), LFUNCVAL( helper_index ) },
+  { LNILKEY, LNILVAL }
+};
+
+const LUA_REG_TYPE rpc_server_handle[] =
+{
+  { LNILKEY, LNILVAL }
+};
+
+const LUA_REG_TYPE rpc_map[] =
+{
+  {  LSTRKEY( "connect" ), LFUNCVAL( rpc_connect ) },
+  {  LSTRKEY( "close" ), LFUNCVAL( rpc_close ) },
+  {  LSTRKEY( "server" ), LFUNCVAL( rpc_server ) },
+  {  LSTRKEY( "on_error" ), LFUNCVAL( rpc_on_error ) },
+  {  LSTRKEY( "listen" ), LFUNCVAL( rpc_listen ) },
+  {  LSTRKEY( "peek" ), LFUNCVAL( rpc_peek ) },
+  {  LSTRKEY( "dispatch" ), LFUNCVAL( rpc_dispatch ) },
+  {  LSTRKEY( "rpc_async" ), LFUNCVAL( rpc_async ) },
+  { LNILKEY, LNILVAL }
+};
+
+
+LUALIB_API int luaopen_luarpc(lua_State *L)
+{
+#if LUA_OPTIMIZE_MEMORY > 0
+	luaL_rometatable(L, "rpc.helper", (void*)rpc_helper);
+	luaL_rometatable(L, "rpc.handle", (void*)rpc_handle);
+	luaL_rometatable(L, "rpc.server_handle", (void*)rpc_server_handle);
+#else
+  luaL_register( L, "rpc", rpc_map );
+
+  luaL_newmetatable( L, "rpc.helper" );
+  luaL_register( L, NULL, rpc_helper );
+  
+  luaL_newmetatable( L, "rpc.handle" );
+  luaL_register( L, NULL, rpc_handle );
+  
+  luaL_newmetatable( L, "rpc.server_handle" );
+#endif
+  return 1;
+}
+
+#else
+
 static const luaL_reg rpc_handle[] =
 {
   { "__index", handle_index },
@@ -1272,5 +1349,7 @@ LUALIB_API int luaopen_luarpc(lua_State *L)
 
   return 1;
 }
+
+#endif
 
 #endif
