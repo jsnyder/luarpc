@@ -1,10 +1,14 @@
 TODO
 ----
 
-rpc_on_error (HANDLE, func)   <-- add option for handle 
+come up with cleaner approach towards getting remote variables
 
-pass user data to a remote function (or as return values)? the write()
-function apparently needs this
+__newindex implementation to set variables on remote side
+
+deal better with link level errors, especially for serial where minimal
+transmission guarantees are made
+
+rpc.on_error (HANDLE, func)   <-- add option for handle 
 
 pass functions to a remote function (maybe so we can pass local callbacks
 to a remote function). thus we are tying together two function spaces?
@@ -45,9 +49,20 @@ async mode:
 	pass async flag in function call, so no return args passed
 	when reading old async function return values, handle old errors??
 
+OLD TODOS
+---------
+
+pass user data to a remote function (or as return values)? the write()
+function apparently needs this
 
 DONE
 ----
+
+abstract link/transport layer to allow different transports to be used
+
+implement serial support
+
+allow calling functions which are not globals (i.e. ones registered on tables)
 
 handle non-existance of the remote function. we need some convention around
 LRF_call ... or a "verify existance of remote function" function.

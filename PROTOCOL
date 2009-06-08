@@ -20,6 +20,7 @@ Protocol Definition
 -------------------
 
 session:
+	u8 (03)				-- send command to exchange headers
 	"LRPC"				-- "lua remote function protocol"
 	u8						-- protocol version
 	command, command, command, ...
@@ -28,7 +29,8 @@ session:
 command:
 	u8						-- command type (RPC_CMD_*)
 									 01 - function_call
-									 XX - extensible as required
+									 02 - get remote variable
+									 03 - exchange header credentials
 
 function_call:
 	string				-- name of function
@@ -52,18 +54,3 @@ var:
 string:	
 	u32						-- length
 	u8,u8,u8...		-- string bytes
-
-	
-Additional Notes
-----------------
-
-Protocol model from original implementer?:
-
-request:
-	"LRPC"		-- "lua remote procedure call"
-	u8 = 1		-- "all lua function servers identify yourselves"
-       
-reply:
-	"LRPC"		-- "lua remote procedure call"
-	u8 = 2		-- standard reply code
-	string		-- the name of this function server
