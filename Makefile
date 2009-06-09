@@ -33,4 +33,4 @@ module: luarpc.c luarpc_socket.c
 	(mv .libs/libluarpc.so.0.0.0 luarpc.so || mv .libs/libluarpc.0.so luarpc.so)
 
 clean:
-	-rm -rf *~ *.o *.lo *.obj a.out .libs core
+	-rm -rf *~ *.o *.lo *.la *.obj a.out .libs core
