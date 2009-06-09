@@ -526,7 +526,7 @@ static Helper * helper_create( lua_State *L, Handle *handle, const char *funcnam
   luaL_getmetatable( L, "rpc.helper" );
   lua_setmetatable( L, -2 );
   h->handle = handle;
-	h->lname = h->funcname;
+	h->parent = NULL;
   strncpy ( h->funcname, funcname, NUM_FUNCNAME_CHARS );
   return h;
 }
@@ -623,9 +623,9 @@ static int helper_call (lua_State *L)
 	
 	
 	/* @@@ ugly way to capture get calls, should find another way */
-	if( strcmp("get", h->lname ) == 0 )
+	if( strcmp("get", h->funcname ) == 0 )
 	{
-		*(h->lname - 1) = '\0'; /* scrub .get */
+		h = h->parent;
 		helper_get( L );
 		freturn = 1;
 	}
@@ -737,18 +737,16 @@ static int helper_call (lua_State *L)
 
 static Helper * helper_append( lua_State *L, Helper *helper, const char *funcname )
 {
-	size_t plen;
 	Helper *h = ( Helper * )lua_newuserdata( L, sizeof( Helper ) );
   luaL_getmetatable( L, "rpc.helper" );
   lua_setmetatable( L, -2 );
-  h->handle = helper->handle;
-  strncpy( h->funcname, helper->funcname, NUM_FUNCNAME_CHARS );
-	plen = strlen( h->funcname );
-	h->lname = &h->funcname[ plen + 1 ];
-	strncat( h->funcname, ".", NUM_FUNCNAME_CHARS - plen );
-	strncat( h->funcname, funcname, NUM_FUNCNAME_CHARS - ( plen + 1 ) );
+  h->handle = handle;
+	h->parent = helper;
+  strncpy ( h->funcname, funcname, NUM_FUNCNAME_CHARS );
   return h;
 }
+
+
 
 /* indexing a handle returns a helper */
 static int helper_index (lua_State *L)
