@@ -509,7 +509,7 @@ void deal_with_error(lua_State *L, Handle *h, const char *error_string)
 }
 
 
-Handle * handle_create( lua_State *L )
+Handle *handle_create( lua_State *L )
 {
   Handle *h = ( Handle * )lua_newuserdata( L, sizeof( Handle ) );
   luaL_getmetatable( L, "rpc.handle" );
@@ -527,6 +527,7 @@ static Helper * helper_create( lua_State *L, Handle *handle, const char *funcnam
   lua_setmetatable( L, -2 );
   h->handle = handle;
 	h->parent = NULL;
+	h->nparents = 0;
   strncpy ( h->funcname, funcname, NUM_FUNCNAME_CHARS );
   return h;
 }
@@ -554,29 +555,22 @@ static int handle_index (lua_State *L)
 }
 
 
-static int helper_get( lua_State *L )
+static int helper_get(lua_State *L, Helper *helper )
 {
   struct exception e;
   int freturn = 0;
-  Helper *h;
-  Transport *tpt;
-  MYASSERT( lua_gettop( L ) >= 1 );
-  MYASSERT( lua_isuserdata( L, 1 ) && ismetatable_type( L, 1, "rpc.helper" ) );
+  Transport *tpt = &helper->handle->tpt;
   
-  /* get helper object and its transport */
-  h = ( Helper * )lua_touserdata( L, 1 );
-  tpt = &h->handle->tpt;
-
   Try
   {
     int i,len,n;
     u32 nret,ret_code;
 				
     /* write function name */
-    len = strlen( h->funcname );
+    len = strlen( helper->funcname );
 		transport_write_u8( tpt, RPC_CMD_GET );
     transport_write_u32 ( tpt, len );
-    transport_write_string( tpt, h->funcname, len );
+    transport_write_string( tpt, helper->funcname, len );
 
 		/* read variable back */
     read_variable( tpt, L );
@@ -590,16 +584,16 @@ static int helper_get( lua_State *L )
 			case fatal:
 				if ( e.errnum == ERR_CLOSED )
 		      my_lua_error( L, "can't refer to a remote function after the handle has been closed" );
-				deal_with_error( L, h->handle, errorString( e.errnum ) );
+				deal_with_error( L, helper->handle, errorString( e.errnum ) );
 				transport_close( tpt );
 				break;
 			case nonfatal:
-				deal_with_error( L, h->handle, errorString( e.errnum ) );
+				deal_with_error( L, helper->handle, errorString( e.errnum ) );
 				lua_pushnil( L );
 				return 1;
 				break;
 			default:
-        deal_with_error( L, h->handle, errorString( e.errnum ) );
+        deal_with_error( L, helper->handle, errorString( e.errnum ) );
 				transport_close( tpt );
 				break;
 		}
@@ -625,8 +619,7 @@ static int helper_call (lua_State *L)
 	/* @@@ ugly way to capture get calls, should find another way */
 	if( strcmp("get", h->funcname ) == 0 )
 	{
-		h = h->parent;
-		helper_get( L );
+		helper_get( L, h->parent );
 		freturn = 1;
 	}
 	else
@@ -635,6 +628,8 @@ static int helper_call (lua_State *L)
 	  {
 	    int i,len,n;
 	    u32 nret,ret_code;
+			Helper **hstack;
+			char *fname;
 
 	    /* first read out any pending return values for old async calls */
 	    for (; h->handle->read_reply_count > 0; h->handle->read_reply_count--) {
@@ -664,10 +659,34 @@ static int helper_call (lua_State *L)
 	    }
 
 	    /* write function name */
-	    len = strlen( h->funcname );
+	
+			/* get length of name & make stack of helpers */
+			len = strlen( h->funcname );
+			if( h->nparents > 0 )
+			{
+				hstack = ( Helper ** )alloca( sizeof( Helper * ) * h->nparents );
+				hstack[ h->nparents - 1 ] = h->parent;
+				len += strlen( hstack[ h->nparents - 1 ]->funcname ) + 1;
+				
+				for(i = h->nparents - 1 ; i > 0 ; i -- )
+				{
+					hstack[ i - 1 ] = hstack[ i ]->parent;
+					len += strlen( hstack[ i ]->funcname ) + 1;
+				}
+			}
+			
 			transport_write_u8( tpt, RPC_CMD_CALL );
 	    transport_write_u32 ( tpt, len );
-	    transport_write_string( tpt, h->funcname, len );
+			/* replay helper key names */			
+			if( h->nparents > 0)
+			{
+				for( i = 0 ; i < h->nparents ; i ++ )
+				{
+				 transport_write_string( tpt, hstack[ i ]->funcname, strlen( hstack[ i ]->funcname ) );
+				 transport_write_string( tpt, ".", 1 ); 
+				}
+			}
+			transport_write_string( tpt, h->funcname, strlen( h->funcname ) );
 
 	    /* write number of arguments */
 	    n = lua_gettop( L );
@@ -740,8 +759,9 @@ static Helper * helper_append( lua_State *L, Helper *helper, const char *funcnam
 	Helper *h = ( Helper * )lua_newuserdata( L, sizeof( Helper ) );
   luaL_getmetatable( L, "rpc.helper" );
   lua_setmetatable( L, -2 );
-  h->handle = handle;
+  h->handle = helper->handle;
 	h->parent = helper;
+	h->nparents = helper->nparents + 1;
   strncpy ( h->funcname, funcname, NUM_FUNCNAME_CHARS );
   return h;
 }
@@ -767,8 +787,6 @@ static int helper_index (lua_State *L)
 
   return 1;
 }
-
-
 
 /****************************************************************************/
 /* server side handle userdata objects. */
@@ -906,7 +924,7 @@ static void read_cmd_call( Transport *tpt, lua_State *L )
   funcname = ( char * )alloca( len + 1 );
   transport_read_string( tpt, funcname, len );
   funcname[ len ] = 0;
-
+		
   /* get function */
 	/* @@@ perhaps handle more like variables instead of using a long string? */
 	/* @@@ also strtok is not thread safe */

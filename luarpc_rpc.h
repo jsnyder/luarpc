@@ -87,6 +87,7 @@ extern struct exception_context the_exception_context[ 1 ];
 /* Transport Connection Structure */
 
 /* FIXME: should be cleaner */
+typedef struct _Transport Transport;
 struct _Transport 
 {
 #ifdef LUARPC_ENABLE_SOCKET
@@ -101,9 +102,9 @@ struct _Transport
 	int wrfd, rdfd;
 #endif
 };
-typedef struct _Transport Transport;
 
 
+typedef struct _Handle Handle;
 struct _Handle 
 {
   Transport tpt;      /* the handle socket */
@@ -111,23 +112,23 @@ struct _Handle
   int async;      /* nonzero if async mode being used */
   int read_reply_count;   /* number of async call return values to read */
 };
-typedef struct _Handle Handle;
 
 
+typedef struct _Helper Helper;
 struct _Helper {
   Handle *handle;     /* pointer to handle object */
 	Helper *parent; /* parent helper */
+	u8 nparents; /* number of parents */
   char funcname[NUM_FUNCNAME_CHARS];  /* name of the function */
 };
-typedef struct _Helper Helper;
 
 
+typedef struct _ServerHandle ServerHandle;
 struct _ServerHandle {
   Transport ltpt;   /* listening socket, always valid if no error */
   Transport atpt;   /* accepting socket, valid if connection established */
 	int link_errs;
 };
-typedef struct _ServerHandle ServerHandle;
 
 /* Maximum number of framing errors before connection reset */
 #define MAX_LINK_ERRS ( 2 )

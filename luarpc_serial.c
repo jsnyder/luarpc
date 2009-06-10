@@ -130,25 +130,25 @@ void transport_read_buffer (Transport *tpt, u8 *buffer, int length)
 	TRANSPORT_VERIFY_OPEN;
 	
 	/* Read Header */
-	transport_read_buffer_low( tpt, &tmp, 1);
+	/*transport_read_buffer_low( tpt, &tmp, 1);
 	if ( tmp != HEAD_BYTE )
 	{
 		e.errnum = ERR_DATALINK;
 		e.type = nonfatal;
 		Throw( e );
-	}
+	}*/
 	
 	/* Read Data */
 	transport_read_buffer_low( tpt, buffer, length);
 	
 	/* Read Trailer */
-	transport_read_buffer_low( tpt, &tmp, 1);
+	/*transport_read_buffer_low( tpt, &tmp, 1);
 	if ( tmp != TAIL_BYTE )
 	{
 		e.errnum = ERR_DATALINK;
 		e.type = nonfatal;
 		Throw( e );
-	}
+	}*/
 }
 
 void transport_write_buffer_low( Transport *tpt, const u8 *buffer, int length )
@@ -172,13 +172,13 @@ void transport_write_buffer( Transport *tpt, const u8 *buffer, int length )
 	struct exception e;
 	TRANSPORT_VERIFY_OPEN;
 	
-	tmp = HEAD_BYTE;
-	transport_write_buffer_low( tpt, (const u8 *)&tmp, 1 );
+	/*tmp = HEAD_BYTE;
+	transport_write_buffer_low( tpt, (const u8 *)&tmp, 1 );*/
 	
 	transport_write_buffer_low( tpt, buffer, length );
 	
-	tmp = TAIL_BYTE;
-	transport_write_buffer_low( tpt, (const u8 *)&tmp, 1 );
+	/*tmp = TAIL_BYTE;
+	transport_write_buffer_low( tpt, (const u8 *)&tmp, 1 );*/
 }
 
 /* Check if data is available on connection without reading:
