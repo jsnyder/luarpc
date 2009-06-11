@@ -69,23 +69,21 @@ function doStuff()
 	
 	testval = slave.test:get()
 		
-	slave.yarg.blug = 2	
+	slave.yarg.blug = {23}
 	
-	ytable = slave.yarg:get()
+	print(slave.yarg:get())
 	
-	print(ytable.blug)
+	slave.yurg = tab
 	
-	slave.yurg = 89
 	
-	print(slave.yurg:get())
 	
 	function printglobals(x) for i,v in pairs(_G) do print(i,v) end end
 	
-	-- slave.execfunc( string.dump( printglobals ), nil)
+	slave.execfunc( string.dump( printglobals ), nil)
 	
 	for i,v in pairs(testval) do print(i,v) end
 	
-	-- print(testval)
+	print(testval)
 
 	rpc.close (slave);
 end

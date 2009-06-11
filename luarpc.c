@@ -314,7 +314,7 @@ static void write_function (Transport *tpt, lua_State *L, int table_index)
 static void write_variable( Transport *tpt, lua_State *L, int var_index )
 {
   int stack_at_start = lua_gettop( L );
-
+	
   switch( lua_type( L, var_index ) )
 	{
   	case LUA_TNUMBER:
@@ -811,8 +811,8 @@ static int helper_newindex( lua_State *L )
 		transport_write_u8( tpt, RPC_CMD_NEWINDEX );
 		helper_remote_index( h );
 
-		write_variable( tpt, L, -2 );
-		write_variable( tpt, L, -1 );
+		write_variable( tpt, L, lua_gettop( L ) - 1 );
+		write_variable( tpt, L, lua_gettop( L ) );
 
     freturn = 0;
   }

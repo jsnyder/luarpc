@@ -27,9 +27,10 @@ function foo3 (tab)
 	blah();
 end
 
-test = {1, 2, 3, 3.143, "234"}
 
 yarg = {}
+
+test = {1, 2, 3, 3.143, "234"}
 
 test.sval = 23
 
