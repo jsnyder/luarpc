@@ -104,6 +104,15 @@ struct _Transport
 };
 
 
+#ifdef LUARPC_ENABLE_SOCKET
+	#define LUARPC_MODE "tcpip"
+#endif
+
+#ifdef LUARPC_ENABLE_SERIAL
+	#define LUARPC_MODE "serial"
+#endif
+
+
 typedef struct _Handle Handle;
 struct _Handle 
 {

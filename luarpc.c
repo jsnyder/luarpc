@@ -1427,6 +1427,9 @@ const LUA_REG_TYPE rpc_map[] =
   {  LSTRKEY( "peek" ), LFUNCVAL( rpc_peek ) },
   {  LSTRKEY( "dispatch" ), LFUNCVAL( rpc_dispatch ) },
   {  LSTRKEY( "rpc_async" ), LFUNCVAL( rpc_async ) },
+#if LUA_OPTIMIZE_MEMORY > 0
+  {  LSTRKEY("mode"), LSTRKEY(LUARPC_MODE) },
+#endif // #if LUA_OPTIMIZE_MEMORY > 0
   { LNILKEY, LNILVAL }
 };
 
@@ -1439,6 +1442,8 @@ LUALIB_API int luaopen_luarpc(lua_State *L)
 	luaL_rometatable(L, "rpc.server_handle", (void*)rpc_server_handle);
 #else
   luaL_register( L, "rpc", rpc_map );
+  lua_pushstring(L, LUARPC_MODE);
+	lua_setfield(L, -2, "mode");
 
   luaL_newmetatable( L, "rpc.helper" );
   luaL_register( L, NULL, rpc_helper );
@@ -1490,6 +1495,8 @@ static const luaL_reg rpc_map[] =
 LUALIB_API int luaopen_luarpc(lua_State *L)
 {
   luaL_register( L, "rpc", rpc_map );
+  lua_pushstring(L, LUARPC_MODE);
+	lua_setfield(L, -2, "mode");
 
   luaL_newmetatable( L, "rpc.helper" );
   luaL_register( L, NULL, rpc_helper );

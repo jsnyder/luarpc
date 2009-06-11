@@ -18,8 +18,14 @@ function doStuff()
 	rpc.on_error (error_handler);
 	io.write ("error set\n")
 
-  -- local slave,err = rpc.connect ("localhost",12345);
-	local slave,err = rpc.connect ("/dev/ttys0");
+	if rpc.mode == "tcpip" then
+		slave,err = rpc.connect ("localhost",12345);
+	elseif rpc.mode == "serial" then
+		slave,err = rpc.connect ("/dev/ttys0");
+	end
+
+  
+	-- local slave,err = rpc.connect ("/dev/ttys0");
 	-- local slave,err = rpc.connect ("/dev/tty.usbserial-ftCYPMYJ");
 	-- local slave,err = rpc.connect ("/dev/pts/4");
 	if not slave then
@@ -43,11 +49,8 @@ function doStuff()
 	-- slave.exit (0);		-- trigger socket error at next call
 
 	slave.foo2 (tab);
-	
-	print (slave.testvar)
-	
+		
 	function squareval(x) return x^2 end
-	
 	
 	print(slave.execfunc( string.dump(squareval), 8 ))
 	
