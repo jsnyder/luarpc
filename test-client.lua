@@ -54,8 +54,6 @@ function doStuff()
 	else
 		slave.blah();
 	end
-
-	print("test")
 	
 	xxx = slave.foo2;
 	xxx (tab);
@@ -65,11 +63,11 @@ function doStuff()
 	val = slave.math.cos(2.1)
 	
 	print(val)
-
+	
+	print(slave.test.sval:get())
+	
 	testval = slave.test:get()
 		
-	print(testval["apple"])
-	
 	for i,v in pairs(testval) do print(i,v) end
 	
 	-- print(testval)

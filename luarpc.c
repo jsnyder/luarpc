@@ -555,6 +555,41 @@ static int handle_index (lua_State *L)
 }
 
 
+static void helper_remote_index( Helper *helper )
+{
+	int i, len;
+	Helper **hstack;
+	Transport *tpt = &helper->handle->tpt;
+	
+	/* get length of name & make stack of helpers */
+	len = strlen( helper->funcname );
+	if( helper->nparents > 0 )
+	{
+		hstack = ( Helper ** )alloca( sizeof( Helper * ) * helper->nparents );
+		hstack[ helper->nparents - 1 ] = helper->parent;
+		len += strlen( hstack[ helper->nparents - 1 ]->funcname ) + 1;
+	
+		for(i = helper->nparents - 1 ; i > 0 ; i -- )
+		{
+			hstack[ i - 1 ] = hstack[ i ]->parent;
+			len += strlen( hstack[ i ]->funcname ) + 1;
+		}
+	}
+	
+	transport_write_u32( tpt, len );
+	/* replay helper key names */			
+	if( helper->nparents > 0)
+	{
+		for( i = 0 ; i < helper->nparents ; i ++ )
+		{
+		 transport_write_string( tpt, hstack[ i ]->funcname, strlen( hstack[ i ]->funcname ) );
+		 transport_write_string( tpt, ".", 1 ); 
+		}
+	}
+	transport_write_string( tpt, helper->funcname, strlen( helper->funcname ) );
+}
+
+
 static int helper_get(lua_State *L, Helper *helper )
 {
   struct exception e;
@@ -569,8 +604,7 @@ static int helper_get(lua_State *L, Helper *helper )
     /* write function name */
     len = strlen( helper->funcname );
 		transport_write_u8( tpt, RPC_CMD_GET );
-    transport_write_u32 ( tpt, len );
-    transport_write_string( tpt, helper->funcname, len );
+		helper_remote_index( helper );
 
 		/* read variable back */
     read_variable( tpt, L );
@@ -628,8 +662,6 @@ static int helper_call (lua_State *L)
 	  {
 	    int i,len,n;
 	    u32 nret,ret_code;
-			Helper **hstack;
-			char *fname;
 
 	    /* first read out any pending return values for old async calls */
 	    for (; h->handle->read_reply_count > 0; h->handle->read_reply_count--) {
@@ -647,9 +679,9 @@ static int helper_call (lua_State *L)
 	      else
 	      {
 	        /* read error and handle it */
-	        u32 code = transport_read_u32 (tpt);
-	        u32 len = transport_read_u32 (tpt);
-	        char *err_string = (char*) alloca (len+1);
+	        u32 code = transport_read_u32( tpt );
+	        u32 len = transport_read_u32( tpt );
+	        char *err_string = ( char * )alloca( len + 1 );
 	        transport_read_string( tpt, err_string, len );
 	        err_string[ len ] = 0;
 
@@ -659,34 +691,8 @@ static int helper_call (lua_State *L)
 	    }
 
 	    /* write function name */
-	
-			/* get length of name & make stack of helpers */
-			len = strlen( h->funcname );
-			if( h->nparents > 0 )
-			{
-				hstack = ( Helper ** )alloca( sizeof( Helper * ) * h->nparents );
-				hstack[ h->nparents - 1 ] = h->parent;
-				len += strlen( hstack[ h->nparents - 1 ]->funcname ) + 1;
-				
-				for(i = h->nparents - 1 ; i > 0 ; i -- )
-				{
-					hstack[ i - 1 ] = hstack[ i ]->parent;
-					len += strlen( hstack[ i ]->funcname ) + 1;
-				}
-			}
-			
 			transport_write_u8( tpt, RPC_CMD_CALL );
-	    transport_write_u32 ( tpt, len );
-			/* replay helper key names */			
-			if( h->nparents > 0)
-			{
-				for( i = 0 ; i < h->nparents ; i ++ )
-				{
-				 transport_write_string( tpt, hstack[ i ]->funcname, strlen( hstack[ i ]->funcname ) );
-				 transport_write_string( tpt, ".", 1 ); 
-				}
-			}
-			transport_write_string( tpt, h->funcname, strlen( h->funcname ) );
+			helper_remote_index( h );
 
 	    /* write number of arguments */
 	    n = lua_gettop( L );
@@ -754,7 +760,7 @@ static int helper_call (lua_State *L)
   return freturn;
 }
 
-static Helper * helper_append( lua_State *L, Helper *helper, const char *funcname )
+static Helper *helper_append( lua_State *L, Helper *helper, const char *funcname )
 {
 	Helper *h = ( Helper * )lua_newuserdata( L, sizeof( Helper ) );
   luaL_getmetatable( L, "rpc.helper" );
@@ -765,8 +771,6 @@ static Helper * helper_append( lua_State *L, Helper *helper, const char *funcnam
   strncpy ( h->funcname, funcname, NUM_FUNCNAME_CHARS );
   return h;
 }
-
-
 
 /* indexing a handle returns a helper */
 static int helper_index (lua_State *L)
