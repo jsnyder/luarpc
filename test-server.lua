@@ -29,6 +29,8 @@ end
 
 test = {1, 2, 3, 3.143, "234"}
 
+yarg = {}
+
 test.sval = 23
 
 

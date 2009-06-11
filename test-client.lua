@@ -47,6 +47,7 @@ function doStuff()
 	
 	function squareval(x) return x^2 end
 	
+	
 	print(slave.execfunc( string.dump(squareval), 8 ))
 	
 	if not slave.fn_exists ("blah") then
@@ -68,6 +69,20 @@ function doStuff()
 	
 	testval = slave.test:get()
 		
+	slave.yarg.blug = 2	
+	
+	ytable = slave.yarg:get()
+	
+	print(ytable.blug)
+	
+	slave.yurg = 89
+	
+	print(slave.yurg:get())
+	
+	function printglobals(x) for i,v in pairs(_G) do print(i,v) end end
+	
+	-- slave.execfunc( string.dump( printglobals ), nil)
+	
 	for i,v in pairs(testval) do print(i,v) end
 	
 	-- print(testval)

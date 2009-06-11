@@ -250,7 +250,8 @@ enum
 {
 	RPC_CMD_CALL = 1,
 	RPC_CMD_GET,
-	RPC_CMD_CON
+	RPC_CMD_CON,
+	RPC_CMD_NEWINDEX
 };
 
 enum { RPC_PROTOCOL_VERSION = 3 };
@@ -554,6 +555,32 @@ static int handle_index (lua_State *L)
   return 1;
 }
 
+static int helper_newindex( lua_State *L );
+
+/* indexing a handle returns a helper */
+static int handle_newindex (lua_State *L)
+{
+  const char *s;
+  Helper *h;
+
+  MYASSERT( lua_gettop( L ) == 3 );
+  MYASSERT( lua_isuserdata( L, 1 ) && ismetatable_type( L, 1, "rpc.handle" ) );
+
+  if( lua_type( L, 2 ) != LUA_TSTRING )
+    my_lua_error( L, "can't index a handle with a non-string" );
+  s = lua_tostring( L, 2 );
+	if ( strlen( s ) > NUM_FUNCNAME_CHARS - 1 )
+		my_lua_error( L, "function name is too long" );
+		
+  h = helper_create( L, ( Handle * )lua_touserdata( L, 1 ), s );
+	h->funcname[ 0 ] = '\0';
+	lua_pushvalue( L, 2 );
+	lua_pushvalue( L, 3 );
+	helper_newindex( L );
+  /* return the helper object */
+  return 0;
+}
+
 
 static void helper_remote_index( Helper *helper )
 {
@@ -759,6 +786,60 @@ static int helper_call (lua_State *L)
 	}
   return freturn;
 }
+
+
+static int helper_newindex( lua_State *L )
+{
+  struct exception e;
+  int freturn = 0;
+  Helper *h;
+  Transport *tpt;
+  MYASSERT( lua_isuserdata( L, -3 ) && ismetatable_type( L, -3, "rpc.helper" ) );
+	MYASSERT( lua_isstring( L, -2 ) );
+  
+  /* get helper object and its transport */
+  h = ( Helper * )lua_touserdata( L, -3 );
+  tpt = &h->handle->tpt;
+  
+  Try
+  {
+    int i,len,n;
+    u32 nret,ret_code;
+				
+    /* write function name */
+    len = strlen( h->funcname );
+		transport_write_u8( tpt, RPC_CMD_NEWINDEX );
+		helper_remote_index( h );
+
+		write_variable( tpt, L, -2 );
+		write_variable( tpt, L, -1 );
+
+    freturn = 0;
+  }
+  Catch( e )
+  {
+		switch( e.type )
+		{
+			case fatal:
+				if ( e.errnum == ERR_CLOSED )
+		      my_lua_error( L, "can't refer to a remote function after the handle has been closed" );
+				deal_with_error( L, h->handle, errorString( e.errnum ) );
+				transport_close( tpt );
+				break;
+			case nonfatal:
+				deal_with_error( L, h->handle, errorString( e.errnum ) );
+				lua_pushnil( L );
+				return 1;
+				break;
+			default:
+        deal_with_error( L, h->handle, errorString( e.errnum ) );
+				transport_close( tpt );
+				break;
+		}
+  }
+  return freturn;
+}
+
 
 static Helper *helper_append( lua_State *L, Helper *helper, const char *funcname )
 {
@@ -1026,6 +1107,50 @@ static void read_cmd_get( Transport *tpt, lua_State *L )
 }
 
 
+static void read_cmd_newindex( Transport *tpt, lua_State *L )
+{
+  int i;
+  u32 len;
+  char *funcname;
+	char *token = NULL;
+
+  /* read function name */
+  len = transport_read_u32( tpt ); /* function name string length */ 
+  funcname = ( char * )alloca( len + 1 );
+  transport_read_string( tpt, funcname, len );
+  funcname[ len ] = 0;
+
+  /* get function */
+	/* @@@ perhaps handle more like variables instead of using a long string? */
+	/* @@@ also strtok is not thread safe */
+	if( strlen( funcname ) > 0 ) /*  */
+	{
+		token = strtok( funcname, "." );
+		lua_getglobal( L, token );
+		token = strtok( NULL, "." );
+		while( token != NULL )
+		{
+			lua_getfield( L, -1, token );
+			token = strtok( NULL, "." );
+		}
+		read_variable( tpt, L ); /* key */
+		read_variable( tpt, L ); /* value */	
+		lua_settable( L, -3 ); /* set key to value on indexed table */
+	}
+	else
+	{
+		read_variable( tpt, L ); /* key */
+		read_variable( tpt, L ); /* value */	
+		lua_setglobal( L, lua_tostring( L, -2 ) );
+	}
+	
+
+
+  /* empty the stack */
+  lua_settop ( L, 0 );
+}
+
+
 static ServerHandle *rpc_listen_helper( lua_State *L )
 {
   struct exception e;
@@ -1126,6 +1251,9 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
 					case RPC_CMD_CON: /*  @@@ allow client to "reconnect", should support better mechanism */
 						read_header( &handle->atpt );
 						write_header( &handle->atpt );
+						break;
+					case RPC_CMD_NEWINDEX:
+						read_cmd_newindex( &handle->atpt, L );
 						break;
 					default:
 						e.type = nonfatal;
@@ -1272,6 +1400,7 @@ static int rpc_on_error( lua_State *L )
 const LUA_REG_TYPE rpc_handle[] =
 {
   { LSTRKEY( "__index" ), LFUNCVAL( handle_index ) },
+	{ LSTRKEY( "__newindex"), LFUNCVAL( handle_newindex )},
   { LNILKEY, LNILVAL }
 };
 
@@ -1279,6 +1408,7 @@ const LUA_REG_TYPE rpc_helper[] =
 {
   { LSTRKEY( "__call" ), LFUNCVAL( helper_call ) },
   { LSTRKEY( "__index" ), LFUNCVAL( helper_index ) },
+	{ LSTRKEY( "__newindex" ), LFUNCVAL( helper_newindex ) },
   { LNILKEY, LNILVAL }
 };
 
@@ -1326,6 +1456,7 @@ LUALIB_API int luaopen_luarpc(lua_State *L)
 static const luaL_reg rpc_handle[] =
 {
   { "__index", handle_index },
+	{ "__newindex", handle_newindex },
   { NULL, NULL }
 };
 
@@ -1333,6 +1464,7 @@ static const luaL_reg rpc_helper[] =
 {
   { "__call", helper_call },
   { "__index", helper_index },
+	{ "__newindex", helper_newindex },
   { NULL, NULL }
 };
 
