@@ -1,4 +1,5 @@
 require("luarpc")
+require("showtable")
 
 function error_handler (message)
 	io.write ("MY ERROR: " .. message .. "\n");
@@ -65,26 +66,23 @@ function doStuff()
 	
 	print(val)
 	
-	print(slave.test.sval:get())
 	
 	testval = slave.test:get()
+
+	print(table.show(testval,"testval"))
 		
 	slave.yarg.blug = {23}
 	
-	print(slave.yarg:get())
+	print(table.show(slave.yarg:get()))
 	
 	slave.yurg = tab
 	
+	-- function printglobals(x) for i,v in pairs(_G) do print(i,v) end end
 	
+	-- slave.execfunc( string.dump( printglobals ), nil)
 	
-	function printglobals(x) for i,v in pairs(_G) do print(i,v) end end
+	-- for i,v in pairs(testval) do print(i,v) end
 	
-	slave.execfunc( string.dump( printglobals ), nil)
-	
-	for i,v in pairs(testval) do print(i,v) end
-	
-	print(testval)
-
 	rpc.close (slave);
 end
 
