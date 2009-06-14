@@ -22,6 +22,11 @@ function execfunc( fstring, input )
 	return func(input)
 end
 
+function execrfunc( func, input )
+	print(func)
+	return func(input)
+end
+
 -- this function will fail
 function foo3 (tab)
 	blah();

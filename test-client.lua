@@ -39,7 +39,7 @@ function doStuff()
 	--rpc.on_error (slave,error_handler);
 
 	-- trigger some errors
-	-- slave.a_bad_function(1,2,3,4,5);
+	slave.a_bad_function(1,2,3,4,5);
 
 	slave.foo3();
 
@@ -76,9 +76,17 @@ function doStuff()
 		
 	slave.yarg.blug = {23}
 	
-	print(table.show(slave.yarg:get()))
+	print( table.show(slave.yarg:get(), "slave.yarg") )
 	
 	slave.yurg = tab
+	
+	print( slave.execrfunc( squareval, 9 ) )
+	
+	slave.squareval = squareval
+
+	print( table.show(slave.squareval:get(), "slave.squareval") )
+	
+	print(slave.squareval(99))
 	
 	-- function printglobals(x) for i,v in pairs(_G) do print(i,v) end end
 	
