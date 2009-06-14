@@ -32,6 +32,10 @@ function foo3 (tab)
 	blah();
 end
 
+function mirror( input )
+	return input
+end
+
 
 yarg = {}
 

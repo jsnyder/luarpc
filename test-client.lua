@@ -1,101 +1,59 @@
 require("luarpc")
-require("showtable")
 
 function error_handler (message)
-	io.write ("MY ERROR: " .. message .. "\n");
+	io.write ("Err: " .. message .. "\n");
 end
 
+rpc.on_error (error_handler);
 
-io.write ("client started\n")
+if rpc.mode == "tcpip" then
+	slave, err = rpc.connect ("localhost",12345);
+elseif rpc.mode == "serial" then
+	slave, err = rpc.connect ("/dev/ttys0");
+end
 
-xxx = nil;
+-- Local Dataset
 
 tab = {a=1.4142, b=2};
--- tab.foo = tab;		-- bad
+slave.yarg.blurg = 23
 
-function doStuff()
-	-- set the default error handler for all handles
-	rpc.on_error (error_handler);
-	io.write ("error set\n")
+test_local = {1, 2, 3, 3.143, "234"}
+test_local.sval = 23
 
-	if rpc.mode == "tcpip" then
-		slave,err = rpc.connect ("localhost",12345);
-	elseif rpc.mode == "serial" then
-		slave,err = rpc.connect ("/dev/ttys0");
-	end
-
-  
-	-- local slave,err = rpc.connect ("/dev/ttys0");
-	-- local slave,err = rpc.connect ("/dev/tty.usbserial-ftCYPMYJ");
-	-- local slave,err = rpc.connect ("/dev/pts/4");
-	if not slave then
-		io.write ("error: " .. err .. "\n");
-		exit();
-	end
-
-	io.write ("connected\n")
-
-	-- set the error handler for a specific handle
-	--rpc.on_error (slave,error_handler);
-
-	-- trigger some errors
-	slave.a_bad_function(1,2,3,4,5);
-
-	slave.foo3();
-
-	ret = slave.foo1 (123,3.14159,"hello");
-	io.write ("return value = " .. ret .. "\n");
-
-	-- slave.exit (0);		-- trigger socket error at next call
-
-	slave.foo2 (tab);
-		
-	function squareval(x) return x^2 end
-	
-	print(slave.execfunc( string.dump(squareval), 8 ))
-	
-	if not slave.fn_exists ("blah") then
-		io.write ("blah does not exist\n");
-	else
-		slave.blah();
-	end
-	
-	xxx = slave.foo2;
-	xxx (tab);
-
-	slave.print ("hello there\n");
-	
-	val = slave.math.cos(2.1)
-	
-	print(val)
-	
-	
-	testval = slave.test:get()
-
-	print(table.show(testval,"testval"))
-		
-	slave.yarg.blug = {23}
-	
-	print( table.show(slave.yarg:get(), "slave.yarg") )
-	
-	slave.yurg = tab
-	
-	print( slave.execrfunc( squareval, 9 ) )
-	
-	slave.squareval = squareval
-
-	print( table.show(slave.squareval:get(), "slave.squareval") )
-	
-	print(slave.squareval(99))
-	
-	-- function printglobals(x) for i,v in pairs(_G) do print(i,v) end end
-	
-	-- slave.execfunc( string.dump( printglobals ), nil)
-	
-	-- for i,v in pairs(testval) do print(i,v) end
-	
-	rpc.close (slave);
-end
+function squareval(x) return x^2 end
 
 
-doStuff();
+--
+-- BEGIN TESTS
+--
+
+-- check that our connection exists
+assert( slave, "connection failed" )
+
+-- reflect parameters off mirror
+assert(slave.mirror(42) == 42, "integer return failed")
+assert(slave.mirror("this is a test!") == "this is a test!", "string return failed")
+assert(string.dump(slave.mirror(squareval)) == string.dump(squareval), "function return failed")
+assert(slave.mirror(true) == true, "function return failed")
+
+-- basic remote call with returned data
+assert( slave.foo1 (123,3.14159,"hello") == 456, "basic call and return failed" )
+
+-- execute function remotely
+assert(slave.execfunc( string.dump(squareval), 8 ) == 64, "couldn't serialize and execute dumped function")
+
+-- get remote table
+assert(slave.test:get(), "couldn't get remote table")
+
+-- check that we can get entry on remote table
+assert(test_local.sval == slave.test:get().sval, "table field not equivalent")
+assert(slave.yarg.blurg:get() == 23, "not equal")
+
+-- function assigment
+slave.squareval = squareval
+assert(type(slave.squareval) == "userdata", "function assigment failed")
+
+-- remote execution of assigned function
+assert(slave.squareval(99) == squareval(99), "remote setting and evaluation of function failed")
+
+rpc.close (slave);
