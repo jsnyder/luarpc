@@ -205,8 +205,9 @@ void my_lua_error( lua_State *L, const char *errmsg )
 int check_num_args( lua_State *L, int desired_n )
 {
   int n = lua_gettop( L );   /* number of arguments on stack */
-  if ( n != desired_n ) {
-    char s[ 100 ];
+  if ( n != desired_n )
+  {
+    char s[ 100 ]; /* @@@ can we cut this down? */
     sprintf( s, "must have %d argument%c", desired_n,
        ( desired_n == 1 ) ? '\0' : 's' );
     my_lua_error( L, s );
@@ -537,7 +538,7 @@ Handle *handle_create( lua_State *L )
   return h;
 }
 
-static Helper * helper_create( lua_State *L, Handle *handle, const char *funcname )
+static Helper *helper_create( lua_State *L, Handle *handle, const char *funcname )
 {
   Helper *h = ( Helper * )lua_newuserdata( L, sizeof( Helper ) );
   luaL_getmetatable( L, "rpc.helper" );
@@ -574,7 +575,7 @@ static int handle_index (lua_State *L)
 static int helper_newindex( lua_State *L );
 
 /* indexing a handle returns a helper */
-static int handle_newindex (lua_State *L)
+static int handle_newindex( lua_State *L )
 {
   const char *s;
   Helper *h;
@@ -589,11 +590,7 @@ static int handle_newindex (lua_State *L)
     my_lua_error( L, "function name is too long" );
   
   h = helper_create( L, ( Handle * )lua_touserdata( L, 1 ), "" );
-
-  /* Repush stack items 2 & 3 for __newindex event */
-  /* @@@@ Probably shoud replace handle in the stack... */
-  lua_pushvalue( L, 2 );
-  lua_pushvalue( L, 3 );
+	lua_replace(L, 1);
 
   helper_newindex( L );
 
@@ -984,12 +981,11 @@ static int rpc_close( lua_State *L )
 }
 
 
-
 /* rpc_async (handle,)
  *     this sets a handle's asynchronous calling mode (0/nil=off, other=on).
  *     (this is for the client only).
  */
-
+/* @@@ This should probably be adjusted to be in line with our new multiple command architecture */
 static int rpc_async (lua_State *L)
 {
   Handle *handle;
@@ -1196,7 +1192,6 @@ static ServerHandle *rpc_listen_helper( lua_State *L )
 
 
 /* rpc_listen (port) --> server_handle */
-
 static int rpc_listen( lua_State *L )
 {
   ServerHandle *handle;
@@ -1210,7 +1205,6 @@ static int rpc_listen( lua_State *L )
 
 
 /* rpc_peek (server_handle) --> 0 or 1 */
-
 static int rpc_peek( lua_State *L )
 {
   ServerHandle *handle;
