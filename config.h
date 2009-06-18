@@ -5,9 +5,9 @@
 #define BUILD_LUARPC
 #define LUARPC_STANDALONE
 
-#define LUARPC_ENABLE_SOCKET
+/*#define LUARPC_ENABLE_SOCKET*/
 /* #define LUARPC_ENABLE_FIFO  -- not implemented!!! */
-/* #define LUARPC_ENABLE_SERIAL */
+#define LUARPC_ENABLE_SERIAL
 
 /* signed and unsigned 8, 16 and 32 bit types */
 

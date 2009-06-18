@@ -12,7 +12,7 @@ LUALIB=/usr/lib
 LIBTOOL=libtool --tag=CC --quiet
 
 # compiler, arguments and libs for GCC under unix
-CFLAGS=-ansi -pedantic -g
+CFLAGS=-ansi -std=c99 -pedantic -g
 
 # compiler, arguments and libs for GCC under windows
 #CC=gcc -Wall

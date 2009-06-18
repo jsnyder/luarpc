@@ -44,13 +44,22 @@ void transport_open( Transport *tpt, const char *path )
 	}
 		
 	tcgetattr( tpt->fd, &options);
-	
+
 	cfsetispeed( &options, B115200 );
 	cfsetospeed( &options, B115200 );
-	
+
 	options.c_cflag     |= (CLOCAL | CREAD);
+  
+  /* raw processing */
   options.c_lflag     &= ~(ICANON | ECHO | ECHOE | ISIG);
   options.c_oflag     &= ~OPOST;
+  
+  /* 8N1 */
+  options.c_cflag     &= ~PARENB;
+  options.c_cflag     &= ~CSTOPB;
+  options.c_cflag     &= ~CSIZE;
+  options.c_cflag     |= CS8;
+  
   options.c_cc[VMIN]  = 0;
   options.c_cc[VTIME] = 10;
 
@@ -90,7 +99,9 @@ void transport_accept (Transport *tpt, Transport *atpt)
 	atpt->fd = tpt->fd;
 }
 
-void transport_read_buffer_low( Transport *tpt, u8 *buffer, int length )
+
+/* Read & Write to Transport */
+void transport_read_buffer (Transport *tpt, u8 *buffer, int length)
 {
 	int n;
 	struct exception e;
@@ -122,36 +133,7 @@ void transport_read_buffer_low( Transport *tpt, u8 *buffer, int length )
   }
 }
 
-/* Read & Write to Transport */
-void transport_read_buffer (Transport *tpt, u8 *buffer, int length)
-{
-	u8 tmp;
-	struct exception e;
-	TRANSPORT_VERIFY_OPEN;
-	
-	/* Read Header */
-	/*transport_read_buffer_low( tpt, &tmp, 1);
-	if ( tmp != HEAD_BYTE )
-	{
-		e.errnum = ERR_DATALINK;
-		e.type = nonfatal;
-		Throw( e );
-	}*/
-	
-	/* Read Data */
-	transport_read_buffer_low( tpt, buffer, length);
-	
-	/* Read Trailer */
-	/*transport_read_buffer_low( tpt, &tmp, 1);
-	if ( tmp != TAIL_BYTE )
-	{
-		e.errnum = ERR_DATALINK;
-		e.type = nonfatal;
-		Throw( e );
-	}*/
-}
-
-void transport_write_buffer_low( Transport *tpt, const u8 *buffer, int length )
+void transport_write_buffer( Transport *tpt, const u8 *buffer, int length )
 {
 	int n;
 	struct exception e;
@@ -165,20 +147,6 @@ void transport_write_buffer_low( Transport *tpt, const u8 *buffer, int length )
 		e.type = fatal;
 		Throw( e );
 	}
-}
-void transport_write_buffer( Transport *tpt, const u8 *buffer, int length )
-{
-	u8 tmp;
-	struct exception e;
-	TRANSPORT_VERIFY_OPEN;
-	
-	/*tmp = HEAD_BYTE;
-	transport_write_buffer_low( tpt, (const u8 *)&tmp, 1 );*/
-	
-	transport_write_buffer_low( tpt, buffer, length );
-	
-	/*tmp = TAIL_BYTE;
-	transport_write_buffer_low( tpt, (const u8 *)&tmp, 1 );*/
 }
 
 /* Check if data is available on connection without reading:

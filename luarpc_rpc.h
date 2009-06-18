@@ -101,6 +101,12 @@ struct _Transport
 #ifdef LUARPC_ENABLE_FIFO
 	int wrfd, rdfd;
 #endif
+  u8     loc_little: 1, /* Local is little endian? */
+         loc_armflt: 1, /* local float representation is arm float? */
+         loc_intnum: 1, /* Local is integer only? */
+         net_little: 1, /*  Network is little endian? */
+         net_intnum: 1; /* Network is integer only? */
+  u8     lnum_bytes;
 };
 
 

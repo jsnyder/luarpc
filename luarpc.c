@@ -19,6 +19,7 @@
 #ifndef LUARPC_STANDALONE
 #include "platform.h"
 #include "platform_conf.h"
+#include "lrotable.h"
 #else
 #include "config.h"
 #endif
@@ -68,6 +69,36 @@ static void rpcdebug (const char *msg, ...)
   abort();
 }
 
+/* enums for variable types, commands, and status codes */
+
+enum {
+  RPC_NIL=0,
+  RPC_NUMBER,
+  RPC_BOOLEAN,
+  RPC_STRING,
+  RPC_TABLE,
+  RPC_TABLE_END,
+  RPC_FUNCTION,
+  RPC_FUNCTION_END
+};
+
+enum
+{
+  RPC_CMD_CALL = 1,
+  RPC_CMD_GET,
+  RPC_CMD_CON,
+  RPC_CMD_NEWINDEX
+};
+
+enum
+{
+  RPC_READY = 64,
+  RPC_UNSUPPORTED_CMD
+};
+
+enum { RPC_PROTOCOL_VERSION = 3 };
+
+
 /* return a string representation of an error number */
 
 static const char * errorString (int n)
@@ -80,6 +111,7 @@ static const char * errorString (int n)
   case ERR_DATALINK: return "transmission error at data link level";
   case ERR_NODATA: return "no data received when attempting to read";
   case ERR_BADFNAME: return "function name is too long";
+  case RPC_UNSUPPORTED_CMD: return "an unsupported action was requested";
   default: return transport_strerror (n);
   }
 }
@@ -125,66 +157,132 @@ static void transport_write_u8( Transport *tpt, u8 x )
   transport_write_buffer (tpt,&x,1);
 }
 
+static void swap_bytes( char *number, size_t numbersize )
+{
+ int i;
+ for (i=0; i<numbersize/2; i++)
+ {
+  char temp = number[i];
+  number[i] = number[numbersize-1-i];
+  number[numbersize-1-i] = temp;
+ }
+}
+
+union u32_bytes {
+  u32 i;
+  u8 b[4];
+};
 
 /* read a u32 from the transport */
-
 static u32 transport_read_u32( Transport *tpt )
 {
-  u8 b[4];
-  u32 i;
+  union u32_bytes ub;
   struct exception e;
   TRANSPORT_VERIFY_OPEN;
-  transport_read_buffer ( tpt, b, 4 );
-  i = ( b[ 0 ] << 24 ) | (b[ 1 ] << 16 ) | ( b[ 2 ] << 8) | b[ 3 ];
-  return i;
+  transport_read_buffer ( tpt, ub.b, 4 );
+  if( tpt->net_little != tpt->loc_little )
+    swap_bytes( (char *)ub.b, 4 );
+  return ub.i;
 }
 
 
 /* write a u32 to the transport */
-
 static void transport_write_u32 (Transport *tpt, u32 x)
 {
-  u8 b[4];
+  union u32_bytes ub;
   struct exception e;
   TRANSPORT_VERIFY_OPEN;
-  b[0] = x >> 24;
-  b[1] = x >> 16;
-  b[2] = x >> 8;
-  b[3] = x;
-  transport_write_buffer (tpt,b,4);
+  ub.i = x;
+  if( tpt->net_little != tpt->loc_little )
+    swap_bytes( (char *)ub.b, 4 );
+  transport_write_buffer( tpt, ub.b, 4 );
 }
-
-
-/* Represent doubles as byte string */
-union DoubleBytes {
-  double d;
-  u8 b[ sizeof( double ) ];
-};
 
 /* read a double from the transport */
 
-static double transport_read_double (Transport *tpt)
+static lua_Number transport_read_number (Transport *tpt)
 {
-  union DoubleBytes double_bytes;
+  lua_Number x;
+  u8 b[ tpt->lnum_bytes ];
   struct exception e;
   TRANSPORT_VERIFY_OPEN;
-  /* @@@ handle endianness */
-  transport_read_buffer ( tpt,double_bytes.b, sizeof( double ) );
-  return double_bytes.d;
+  transport_read_buffer ( tpt, b, tpt->lnum_bytes );
+  
+  if( tpt->net_little != tpt->loc_little )
+    swap_bytes( ( char * )b, tpt->lnum_bytes );
+  
+  if( tpt->net_intnum != tpt->loc_intnum )
+  {
+    switch( tpt->lnum_bytes )
+    {
+      case 1: {
+        int8_t y = *( int8_t * )b;
+        x = ( lua_Number )y;
+      } break;
+       case 2: {
+        int16_t y = *( int16_t * )b;
+        x = ( lua_Number )y;
+      } break;
+      case 4: {
+        int32_t y = *( int32_t * )b;
+        x = ( lua_Number )y;
+      } break;
+      case 8: {
+        int64_t y = *( int64_t * )b;
+        x = ( lua_Number )y;
+      } break;
+      default: lua_assert(0);
+    }
+  }
+  else
+    x = ( lua_Number ) *( lua_Number * )b;
+    
+  return x;
 }
 
 
 /* write a double to the transport */
 
-static void transport_write_double (Transport *tpt, double x)
+static void transport_write_number (Transport *tpt, lua_Number x)
 {
-  int n;
-  union DoubleBytes double_bytes;
   struct exception e;
   TRANSPORT_VERIFY_OPEN;
-  /* @@@ handle endianness */
-  double_bytes.d = x;
-  transport_write_buffer( tpt,double_bytes.b, sizeof( double ) );
+   
+  if( tpt->net_intnum != tpt->loc_intnum )
+  {
+    switch( tpt->lnum_bytes )
+    {
+      case 1: {
+        int8_t y = ( int8_t )x;
+        transport_write_buffer( tpt, (char *)&y, 1 );
+      } break;
+      case 2: {
+        int16_t y = ( int16_t )x;
+        if( tpt->net_little != tpt->loc_little )
+          swap_bytes( ( char * )&y, 2 );
+        transport_write_buffer( tpt, (char *)&y, 2 );
+      } break;
+      case 4: {
+        int32_t y = ( int32_t )x;
+        if( tpt->net_little != tpt->loc_little )
+          swap_bytes( ( char * )&y, 4 );
+        transport_write_buffer( tpt, (char *)&y, 4 );
+      } break;
+      case 8: {
+        int64_t y = ( int64_t )x;
+        if( tpt->net_little != tpt->loc_little )
+          swap_bytes( ( char * )&y, 8 );
+        transport_write_buffer( tpt, (char *)&y, 8 );
+      } break;
+      default: lua_assert(0);
+    }
+  }
+  else
+  {
+    if( tpt->net_little != tpt->loc_little )
+       swap_bytes( ( char * )&x, 8 );
+    transport_write_buffer( tpt, ( char * )&x, 8 );
+  }
 }
 
 
@@ -236,26 +334,7 @@ static int ismetatable_type( lua_State *L, int ud, const char *tname )
  * wrapped in a Try block.
  */
 
-enum {
-  RPC_NIL=0,
-  RPC_NUMBER,
-  RPC_BOOLEAN,
-  RPC_STRING,
-  RPC_TABLE,
-  RPC_TABLE_END,
-  RPC_FUNCTION,
-  RPC_FUNCTION_END
-};
 
-enum
-{
-  RPC_CMD_CALL = 1,
-  RPC_CMD_GET,
-  RPC_CMD_CON,
-  RPC_CMD_NEWINDEX
-};
-
-enum { RPC_PROTOCOL_VERSION = 3 };
 
 /* write a table at the given index in the stack. the index must be absolute
  * (i.e. positive).
@@ -313,7 +392,7 @@ static void write_variable( Transport *tpt, lua_State *L, int var_index )
   {
     case LUA_TNUMBER:
       transport_write_u8( tpt, RPC_NUMBER );
-      transport_write_double( tpt, lua_tonumber( L, var_index ) );
+      transport_write_number( tpt, lua_tonumber( L, var_index ) );
       break;
 
     case LUA_TSTRING:
@@ -420,7 +499,7 @@ static int read_variable( Transport *tpt, lua_State *L )
       break;
 
     case RPC_NUMBER:
-      lua_pushnumber( L, transport_read_double( tpt ) );
+      lua_pushnumber( L, transport_read_number( tpt ) );
       break;
 
     case RPC_STRING:
@@ -462,9 +541,15 @@ static int read_variable( Transport *tpt, lua_State *L )
 /* functions for sending and receving headers
  */
 
-static void write_header( Transport *tpt )
+static void client_negotiate( Transport *tpt )
 {
-  char header[ 5 ];
+  struct exception e;
+  char header[ 8 ];
+  int x = 1;
+
+  tpt->loc_little = (char)*(char*)&x;
+  tpt->lnum_bytes = (char)sizeof(lua_Number);
+  tpt->loc_intnum = (char)(((lua_Number)0.5)==0);
 
   /* write the protocol header */
   header[0] = 'L';
@@ -472,14 +557,40 @@ static void write_header( Transport *tpt )
   header[2] = 'P';
   header[3] = 'C';
   header[4] = RPC_PROTOCOL_VERSION;
-
+  header[5] = tpt->loc_little;
+  header[6] = tpt->lnum_bytes;
+  header[7] = tpt->loc_intnum;
   transport_write_string( tpt, header, sizeof( header ) );
+  
+  
+  /* read response with wire configuration */
+  transport_read_string( tpt, header, sizeof( header ) );
+  if( header[0] != 'L' ||
+      header[1] != 'R' ||
+      header[2] != 'P' ||
+      header[3] != 'C' ||
+      header[4] != RPC_PROTOCOL_VERSION )
+  {
+    e.errnum = ERR_PROTOCOL;
+    e.type = nonfatal;
+    Throw( e );
+  }
+  
+  tpt->net_little = header[5];
+  tpt->lnum_bytes = header[6];
+  tpt->net_intnum = header[7];
 }
 
-static void read_header( Transport *tpt )
+static void server_negotiate( Transport *tpt )
 {
   struct exception e;
-  char header[ 5 ];
+  char header[ 8 ];
+  int x = 1;
+  
+  tpt->net_little = tpt->loc_little = (char)*(char*)&x;
+  tpt->lnum_bytes = (char)sizeof(lua_Number);
+  tpt->net_intnum = tpt->loc_intnum = (char)(((lua_Number)0.5)==0);
+  
   
   /* check that the header is ok */
   transport_read_string( tpt, header, sizeof( header ) );
@@ -493,6 +604,22 @@ static void read_header( Transport *tpt )
     e.type = nonfatal;
     Throw( e );
   }
+  
+  /*  check if endianness differs, if so use big endian order  */
+  if( header[ 5 ] != tpt->loc_little )
+    header[ 5 ] = tpt->net_little = 0;
+    
+  /* set number precision to lowest common denominator */
+  if( header[ 6 ] > tpt->lnum_bytes )
+    header[ 6 ] = tpt->lnum_bytes;
+  if( header[ 6 ] < tpt->lnum_bytes )
+    tpt->lnum_bytes = header[ 6 ];
+  
+  /* if lua_Number is integer on either side, use integer */
+  if( header[ 7 ] != tpt->loc_intnum )
+    header[ 7 ] = tpt->net_intnum = 1;
+    
+  transport_write_string( tpt, header, sizeof( header ) );
 }
 
 /****************************************************************************/
@@ -641,12 +768,18 @@ static int helper_get(lua_State *L, Helper *helper )
   
   Try
   {
-    int i,len,n;
-    u32 nret,ret_code;
-        
+    int len;
+    u8 cmdresp;
     /* write function name */
     len = strlen( helper->funcname );
     transport_write_u8( tpt, RPC_CMD_GET );
+    cmdresp = transport_read_u8( tpt );
+    if ( cmdresp != RPC_READY )
+    {
+  		e.errnum = cmdresp;
+  		e.type = nonfatal;
+  		Throw( e );
+    }
     helper_remote_index( helper );
 
     /* read variable back */
@@ -705,6 +838,7 @@ static int helper_call (lua_State *L)
     {
       int i,len,n;
       u32 nret,ret_code;
+      u8 cmdresp;
 
       /* first read out any pending return values for old async calls */
       for (; h->handle->read_reply_count > 0; h->handle->read_reply_count--) {
@@ -735,6 +869,13 @@ static int helper_call (lua_State *L)
 
       /* write function name */
       transport_write_u8( tpt, RPC_CMD_CALL );
+      cmdresp = transport_read_u8( tpt );
+      if ( cmdresp != RPC_READY )
+      {
+    		e.errnum = cmdresp;
+    		e.type = nonfatal;
+    		Throw( e );
+      }
       helper_remote_index( h );
 
       /* write number of arguments */
@@ -819,12 +960,19 @@ static int helper_newindex( lua_State *L )
   
   Try
   {
-    int i,len,n;
-    u32 nret,ret_code;
+    int len;
+    u8 cmdresp;
         
     /* write function name */
     len = strlen( h->funcname );
     transport_write_u8( tpt, RPC_CMD_NEWINDEX );
+    cmdresp = transport_read_u8( tpt );
+    if ( cmdresp != RPC_READY )
+    {
+  		e.errnum = cmdresp;
+  		e.type = nonfatal;
+  		Throw( e );
+    }
     helper_remote_index( h );
 
     write_variable( tpt, L, lua_gettop( L ) - 1 );
@@ -905,13 +1053,11 @@ static ServerHandle *server_handle_create( lua_State *L )
   return h;
 }
 
-
 static void server_handle_shutdown( ServerHandle *h )
 {
   transport_close( &h->ltpt );
   transport_close( &h->atpt );
 }
-
 
 static void server_handle_destroy( ServerHandle *h )
 {
@@ -937,8 +1083,7 @@ static int rpc_connect( lua_State *L )
     transport_open_connection( L, handle );
     
     transport_write_u8( &handle->tpt, RPC_CMD_CON );
-    write_header( &handle->tpt );
-    read_header( &handle->tpt );
+    client_negotiate( &handle->tpt );
   }
   Catch( e )
   {     
@@ -1091,7 +1236,6 @@ static void read_cmd_call( Transport *tpt, lua_State *L )
 
 static void read_cmd_get( Transport *tpt, lua_State *L )
 {
-  int i;
   u32 len;
   char *funcname;
   char *token = NULL;
@@ -1124,7 +1268,6 @@ static void read_cmd_get( Transport *tpt, lua_State *L )
 
 static void read_cmd_newindex( Transport *tpt, lua_State *L )
 {
-  int i;
   u32 len;
   char *funcname;
   char *token = NULL;
@@ -1256,19 +1399,22 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
         switch ( transport_read_u8( &handle->atpt ) )
         {
           case RPC_CMD_CALL:
+            transport_write_u8( &handle->atpt, RPC_READY );
             read_cmd_call( &handle->atpt, L );
             break;
           case RPC_CMD_GET:
+            transport_write_u8( &handle->atpt, RPC_READY );
             read_cmd_get( &handle->atpt, L );
             break;
           case RPC_CMD_CON: /*  @@@ allow client to "reconnect", should support better mechanism */
-            read_header( &handle->atpt );
-            write_header( &handle->atpt );
+            server_negotiate( &handle->atpt );
             break;
           case RPC_CMD_NEWINDEX:
+            transport_write_u8( &handle->atpt, RPC_READY );
             read_cmd_newindex( &handle->atpt, L );
             break;
           default:
+            transport_write_u8(&handle->atpt, RPC_UNSUPPORTED_CMD );
             e.type = nonfatal;
             e.errnum = ERR_COMMAND;
             Throw( e );
@@ -1312,8 +1458,7 @@ static void rpc_dispatch_helper( lua_State *L, ServerHandle *handle )
       switch ( transport_read_u8( &handle->atpt ) )
       {
         case RPC_CMD_CON:
-          read_header( &handle->atpt );
-          write_header( &handle->atpt );
+          server_negotiate( &handle->atpt );
           break;
         default: /* connection must be established to issue any other commands */
           e.type = nonfatal;
@@ -1441,7 +1586,7 @@ const LUA_REG_TYPE rpc_map[] =
   {  LSTRKEY( "dispatch" ), LFUNCVAL( rpc_dispatch ) },
   {  LSTRKEY( "rpc_async" ), LFUNCVAL( rpc_async ) },
 #if LUA_OPTIMIZE_MEMORY > 0
-  {  LSTRKEY("mode"), LSTRKEY(LUARPC_MODE) },
+/*  {  LSTRKEY("mode"), LSTRVAL( LUARPC_MODE ) }, */
 #endif // #if LUA_OPTIMIZE_MEMORY > 0
   { LNILKEY, LNILVAL }
 };
@@ -1455,7 +1600,7 @@ LUALIB_API int luaopen_luarpc(lua_State *L)
   luaL_rometatable(L, "rpc.server_handle", (void*)rpc_server_handle);
 #else
   luaL_register( L, "rpc", rpc_map );
-  lua_pushstring(L, LUARPC_MODE);
+  lua_pushstring( L, LUARPC_MODE );
   lua_setfield(L, -2, "mode");
 
   luaL_newmetatable( L, "rpc.helper" );
