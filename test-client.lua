@@ -21,6 +21,26 @@ test_local.sval = 23
 
 function squareval(x) return x^2 end
 
+function positer ( frequency, amplitude, time )
+  local i = 0
+  return function ()
+    i = i + 1
+    if i <= time*100 then
+      return math.sin(i/50*math.pi*frequency)*(1024*64/360)*amplitude
+    end
+  end
+end
+
+function oscillate ( frequency, amplitude, time )  
+  lastpos = 0
+	positions = {}
+	updates = {}
+  for pos in positer( frequency, amplitude, time ) do
+		table.insert(positions,#positions+1,lastpos)
+    table.insert(updates,#updates+1,(pos-lastpos))
+    lastpos = pos
+  end
+end
 
 --
 -- BEGIN TESTS
@@ -59,5 +79,13 @@ assert(type(slave.squareval) == "userdata", "function assigment failed")
 
 -- remote execution of assigned function
 assert(slave.squareval(99) == squareval(99), "remote setting and evaluation of function failed")
+
+slave.positer = positer
+slave.oscillate = oscillate
+
+slave.collectgarbage()
+
+slave.oscillate(1, 20, 3)
+
 
 rpc.close (slave);

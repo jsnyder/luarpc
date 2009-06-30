@@ -198,7 +198,7 @@ void transport_close (Transport *tpt)
 		
 		/* Send break to the other side to indicate to opposing side that connection is ending */
 		tcsendbreak(tpt->fd, 0);
-  	tpt->fd = INVALID_TRANSPORT;
+  	/* tpt->fd = INVALID_TRANSPORT; */
 	}
 }
 
