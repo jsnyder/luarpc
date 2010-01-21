@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <alloca.h>
+#include <stdint.h>
 
 #include "lua.h"
 #include "lualib.h"
