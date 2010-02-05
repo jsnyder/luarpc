@@ -1,4 +1,4 @@
-require("luarpc")
+require("rpc")
 
 function error_handler (message)
 	io.write ("Err: " .. message .. "\n");
@@ -40,6 +40,7 @@ function oscillate ( frequency, amplitude, time )
     table.insert(updates,#updates+1,(pos-lastpos))
     lastpos = pos
   end
+	return positions
 end
 
 --
@@ -85,7 +86,7 @@ slave.oscillate = oscillate
 
 slave.collectgarbage()
 
-slave.oscillate(1, 20, 3)
+assert(#slave.oscillate(1, 20, 0.1) == #oscillate(1, 20, 0.1), "remote multiple functions with upvalues in them failed")
 
 
 rpc.close (slave);

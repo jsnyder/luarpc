@@ -12,7 +12,7 @@ LUALIB=/usr/lib
 LIBTOOL=libtool --tag=CC --quiet
 
 # compiler, arguments and libs for GCC under unix
-CFLAGS=-ansi -fPIC -std=c99 -pedantic -g
+CFLAGS=-ansi -fPIC -std=c99 -pedantic -g -DLUARPC_STANDALONE
 
 # compiler, arguments and libs for GCC under windows
 #CC=gcc -Wall
@@ -27,7 +27,8 @@ all: osx
 osx: luarpc.c
 	gcc $(CFLAGS) -c -o luarpc.o luarpc.c
 	gcc $(CFLAGS) -c -o luarpc_serial.o luarpc_serial.c
-	gcc -O -bundle -undefined dynamic_lookup -fPIC -o luarpc.so luarpc.o luarpc_serial.o
+	gcc $(CFLAGS) -c -o serial_posix.o serial_posix.c
+	gcc -O -bundle -undefined dynamic_lookup -fPIC -o rpc.so luarpc.o luarpc_serial.o serial_posix.c
 
 module: luarpc.c luarpc_socket.c
 	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc.c
