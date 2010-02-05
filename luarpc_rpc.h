@@ -83,7 +83,7 @@ struct _Transport
 {
   ser_handler fd;
   unsigned tmr_id;
-  u8     loc_little: 1,               // Local is little endian?
+  u32    loc_little: 1,               // Local is little endian?
          loc_armflt: 1,               // local float representation is arm float?
          loc_intnum: 1,               // Local is integer only?
          net_little: 1,               // Network is little endian?
