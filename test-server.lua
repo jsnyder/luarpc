@@ -1,4 +1,4 @@
-require("luarpc")
+require("rpc")
 
 function fn_exists (funcname)
 	return type(_G[funcname]) == "function"
@@ -39,7 +39,7 @@ end
 
 yarg = {}
 
-test = {1, 2, 3, 3.143, "234"}
+test = {1, 2, 3, 4, "234"}
 
 test.sval = 23
 
@@ -48,24 +48,20 @@ io.write ("server started\n")
 
 -- rpc.server ("/dev/ptys0"); -- use for serial mode
 -- rpc.server ("/dev/ptmx"); -- use for serial mode
-if rpc.mode == "tcpip" then
-	print("Server Running: TCP/IP Mode")
-	rpc.server (12345); -- use for socket mode
-elseif rpc.mode == "serial" then
-	print("Server Running: Serial Mode")
-	rpc.server ("/dev/ptys0");
-end
+
+print("Server Running: Serial Mode")
+rpc.server ("/dev/ptys0");
 
 -- an alternative way
 
---count = 0;
---handle = rpc.listen (12345);
---while 1 do
---	if rpc.peek (handle) then
---		io.write ("dispatch\n")
---		rpc.dispatch (handle)
---	else
---		io.write ("do dee do " .. count .. "...\n")
---	end
---	count = count + 1;
---end
+-- count = 0;
+-- handle = rpc.listen ("/dev/ptys0");
+-- while 1 do
+--   if rpc.peek (handle) then
+--     io.write ("dispatch\n")
+--     rpc.dispatch (handle)
+--   else
+--     io.write ("do dee do " .. count .. "...\n")
+--   end
+--   count = count + 1;
+-- end
