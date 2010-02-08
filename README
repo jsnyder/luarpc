@@ -2,7 +2,7 @@ Lua-RPC is a Lua library to allow simple remote procedure calling. That is, a
 Lua script running on one machine can call functions from a script that is
 running on another machine.
 
-This is version 0.2, a pre-alpha release.
+This is version 0.3, a pre-alpha release.
 
 The goal of this project is to create an RPC module for Lua that is both
 simple and light on resource usage. In addition, the module intends to
@@ -26,9 +26,9 @@ NOTE: using psuedo-terminals on Linux still has issues.
 
 As of May 28, 2009, serial and socket "transport" modes should be functional.
 One can switch between these by selectively commenting/uncommenting lines in
-config.h as below:
+platform_conf.h as below:
 
-/* #define LUARPC_ENABLE_SOCKET */
+// #define LUARPC_ENABLE_SOCKET
 #define LUARPC_ENABLE_SERIAL
 
 This builds the module in serial mode. At this time, one cannot build with
@@ -41,7 +41,7 @@ USAGE
 The result of the build is a .so file that within a Lua script, one should be
 able to simply do a:
 
-require("luarpc")
+require("rpc")
 
 with the module in the Lua path, and use the module as suggested in
 test-client.lua and test-server.lua.
