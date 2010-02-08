@@ -16,24 +16,19 @@ BUILDING
 
 In order to build the module, just type:
 
-make
+Serial Mode:
+make config=serial
+
+TCP/IP (Socket) Mode:
+make config=socket
+
+NOTE: If you switch between these configurations, make sure to do a make clean between, as it seems to think the target is up to date from the previous build.
 
 This should succeed if you have Lua already installed on a Linux or Mac OS X
 system. If it does not succeed, feel free to contact me at
 jbsnyder@fanplastic.org.
 
-NOTE: using psuedo-terminals on Linux still has issues.
-
-As of May 28, 2009, serial and socket "transport" modes should be functional.
-One can switch between these by selectively commenting/uncommenting lines in
-platform_conf.h as below:
-
-// #define LUARPC_ENABLE_SOCKET
-#define LUARPC_ENABLE_SERIAL
-
-This builds the module in serial mode. At this time, one cannot build with
-multiple modes enabled (this may be added in the future).
-
+Windows support is somewhat implemented, though not yet ready.
 
 USAGE
 -----

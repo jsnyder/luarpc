@@ -50,9 +50,11 @@ io.write ("server started\n")
 -- rpc.server ("/dev/ptmx"); -- use for serial mode
 
 if rpc.mode == "tcpip" then
+  io.write("TCP/IP Server Started\n")
   rpc.server(12346);
 elseif rpc.mode == "serial" then
-  rpc.server("/dev/ttys0");
+  io.write("Serial Server Started\n")
+  rpc.server("/dev/ptys0");
 end
 
 -- an alternative way

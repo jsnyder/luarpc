@@ -15,15 +15,4 @@
 
 #endif
 
-
-// BUILDING FOR STANDALONE MODULE
-#ifdef LUARPC_STANDALONE
-
-#define BUILD_RPC
-
-//#define LUARPC_ENABLE_SERIAL
-#define LUARPC_ENABLE_SOCKET
-
-#endif
-
 #endif // #ifndef __PLATFORM_CONF_H__
