@@ -4,9 +4,11 @@ function error_handler (message)
 	io.write ("Err: " .. message .. "\n");
 end
 
--- rpc.on_error (error_handler);
-slave, err = rpc.connect ("/dev/ttys0");
-
+if rpc.mode == "tcpip" then
+    slave, err = rpc.connect ("localhost",12346);
+elseif rpc.mode == "serial" then
+    slave, err = rpc.connect ("/dev/ttys0");
+end
 
 -- Local Dataset
 

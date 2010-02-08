@@ -1,7 +1,9 @@
+
 #include "cexcept.h"
 #include "type.h"
 #include "serial.h"
 
+#include "platform_conf.h"
 /****************************************************************************/
 // Parameters
 
@@ -9,7 +11,16 @@
 
 #define MAX_LINK_ERRS ( 2 ) // Maximum number of framing errors before connection reset
 
+#if defined( LUARPC_ENABLE_SERIAL )
 #define LUARPC_MODE "serial"
+#define tpt_handler ser_handler
+#elif defined( LUARPC_ENABLE_SOCKET )
+#define LUARPC_MODE "tcpip"
+typedef int tpt_handler;
+#define MAXCON ( 1 )
+#else
+#error "No RPC mode Selected.."
+#endif
 
 // a kind of silly way to get the maximum int, but oh well ...
 #define MAXINT ((int)((((unsigned int)(-1)) << 1) >> 1))
@@ -81,7 +92,7 @@ extern struct exception_context the_exception_context[ 1 ];
 typedef struct _Transport Transport;
 struct _Transport 
 {
-  ser_handler fd;
+  tpt_handler fd;
   unsigned tmr_id;
   u32    loc_little: 1,               // Local is little endian?
          loc_armflt: 1,               // local float representation is arm float?

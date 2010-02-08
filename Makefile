@@ -22,15 +22,16 @@ CFLAGS=-ansi -fPIC -std=c99 -pedantic -g -DLUARPC_STANDALONE
 ##############################################################################
 # don't change anything below this line
 
-all: module
+all: osx
 
 osx: luarpc.c
 	gcc $(CFLAGS) -c -o luarpc.o luarpc.c
 	gcc $(CFLAGS) -c -o luarpc_serial.o luarpc_serial.c
 	gcc $(CFLAGS) -c -o serial_posix.o serial_posix.c
-	gcc -O -bundle -undefined dynamic_lookup -fPIC -o rpc.so luarpc.o luarpc_serial.o serial_posix.c
+	gcc $(CFLAGS) -c -p luarpc_socket.o luarpc_socket.c
+	gcc -O -bundle -undefined dynamic_lookup -fPIC -o rpc.so luarpc.o luarpc_serial.o serial_posix.o luarpc_socket.o
 
-module: luarpc.c luarpc_socket.c
+linux: luarpc.c luarpc_socket.c
 	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc.c
 	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc_serial.c
 	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c serial_posix.c

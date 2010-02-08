@@ -49,8 +49,11 @@ io.write ("server started\n")
 -- rpc.server ("/dev/ptys0"); -- use for serial mode
 -- rpc.server ("/dev/ptmx"); -- use for serial mode
 
-print("Server Running: Serial Mode")
-rpc.server ("/dev/ptys0");
+if rpc.mode == "tcpip" then
+  rpc.server(12346);
+elseif rpc.mode == "serial" then
+  rpc.server("/dev/ttys0");
+end
 
 -- an alternative way
 

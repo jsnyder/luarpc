@@ -35,7 +35,7 @@
 #include "lualib.h"
 #include "lauxlib.h"
 
-#include "config.h"
+#include "platform_conf.h"
 #include "luarpc_rpc.h"
 
 #ifdef LUARPC_ENABLE_SOCKET
@@ -146,6 +146,8 @@ const char * transport_strerror (int n)
 #endif
 
 #endif /* END WINDOWS SOCKET STUFF  */
+
+#define sock_errno errno
 
 /* check that a given stack value is a port number, and return its value. */
 
