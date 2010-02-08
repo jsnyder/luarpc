@@ -1,6 +1,8 @@
 // Serial inteface implementation for POSIX-compliant systems
 
-#define _POSIX_C_SOURCE	199309L // linux requires this for nanosleep
+#if defined( linux )
+  #define _POSIX_C_SOURCE	199309L // linux requires this for nanosleep
+#endif
 
 #include "serial.h"
 #include <stdio.h>
