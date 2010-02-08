@@ -27,9 +27,9 @@ all: osx
 osx: luarpc.c
 	gcc $(CFLAGS) -c -o luarpc.o luarpc.c
 	gcc $(CFLAGS) -c -o luarpc_serial.o luarpc_serial.c
+	gcc $(CFLAGS) -c -o luarpc_socket.o luarpc_socket.c
 	gcc $(CFLAGS) -c -o serial_posix.o serial_posix.c
-	gcc $(CFLAGS) -c -p luarpc_socket.o luarpc_socket.c
-	gcc -O -bundle -undefined dynamic_lookup -fPIC -o rpc.so luarpc.o luarpc_serial.o serial_posix.o luarpc_socket.o
+	gcc -O -bundle -undefined dynamic_lookup -fPIC -o rpc.so luarpc.o luarpc_socket.o luarpc_serial.o serial_posix.o 
 
 linux: luarpc.c luarpc_socket.c
 	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc.c

@@ -275,10 +275,10 @@ void transport_accept (Transport *tpt, Transport *atpt)
 {
 	struct exception e;
   struct sockaddr_in clientname;
-  size_t namesize;
+  socklen_t namesize;
   TRANSPORT_VERIFY_OPEN;
-  namesize = sizeof (clientname);
-  atpt->fd = accept (tpt->fd, (struct sockaddr*) &clientname, &namesize);
+  namesize = sizeof( clientname );
+  atpt->fd = accept( tpt->fd, ( struct sockaddr* ) &clientname, &namesize );
   if (atpt->fd == INVALID_TRANSPORT) 
 	{
 		e.errnum = sock_errno;
