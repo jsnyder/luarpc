@@ -22,7 +22,7 @@ CFLAGS=-ansi -fPIC -std=c99 -pedantic -g -DLUARPC_STANDALONE
 ##############################################################################
 # don't change anything below this line
 
-all: osx
+all: module
 
 osx: luarpc.c
 	gcc $(CFLAGS) -c -o luarpc.o luarpc.c
@@ -32,11 +32,10 @@ osx: luarpc.c
 
 module: luarpc.c luarpc_socket.c
 	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc.c
-	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc_socket.c
-	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc_fifo.c
 	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c luarpc_serial.c
-	$(LIBTOOL) --mode=link cc -module -rpath $(LUALIB) -o libluarpc.la luarpc.lo luarpc_socket.lo luarpc_fifo.lo luarpc_serial.lo
-	(mv .libs/libluarpc.so.0.0.0 luarpc.so || mv .libs/libluarpc.0.so luarpc.so)
+	$(LIBTOOL) --mode=compile cc $(CFLAGS) -I$(LUAINC) -c serial_posix.c
+	$(LIBTOOL) --mode=link cc -module -rpath $(LUALIB) -o libluarpc.la luarpc.lo serial_posix.lo luarpc_serial.lo
+	(mv .libs/libluarpc.so.0.0.0 rpc.so || mv .libs/libluarpc.0.so rpc.so)
 
 clean:
 	-rm -rf *~ *.o *.lo *.la *.obj a.out .libs core

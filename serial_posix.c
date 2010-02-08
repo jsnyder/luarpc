@@ -1,16 +1,19 @@
 // Serial inteface implementation for POSIX-compliant systems
 
+#define _POSIX_C_SOURCE	199309L // linux requires this for nanosleep
+
 #include "serial.h"
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <termios.h>
 #include <sys/select.h>
 #include <sys/time.h>
-#include <sys/types.h>
 #include <sys/ioctl.h>
+#include <time.h>
 
 // Open the serial port
 ser_handler ser_open( const char* sername )
@@ -68,9 +71,12 @@ static int ser_number_of_bits_to_id( int nb )
 int ser_setup( ser_handler id, u32 baud, int databits, int parity, int stopbits )
 {
   struct termios termdata;
+  struct timespec tsleep;
   int hnd = ( int )id;
 
-  usleep( 200000 );
+  tsleep.tv_sec  = 0;
+  tsleep.tv_nsec = 200000000;
+  nanosleep( &tsleep, NULL );
   tcgetattr( hnd, &termdata );
 
   // Baud rate
@@ -108,7 +114,9 @@ int ser_setup( ser_handler id, u32 baud, int databits, int parity, int stopbits 
   termdata.c_cflag |= ser_number_of_bits_to_id( databits );
 
   // Disable HW and SW flow control
+#if defined( CRTSCTS ) // not available on all platforms, use if available
   termdata.c_cflag &= ~CRTSCTS;
+#endif
   termdata.c_iflag &= ~( IXON | IXOFF | IXANY );
 
   // Raw input
@@ -179,7 +187,7 @@ void ser_set_timeout_ms( ser_handler id, u32 timeout )
   else if( timeout == SER_NO_TIMEOUT)
   {
     termdata.c_cc[ VTIME ] = 0; 
-    fcntl( id, F_SETFL, FNDELAY ); // no blocking, timeout
+    fcntl( id, F_SETFL, O_NDELAY ); // no blocking, timeout
   }
   else
   {
