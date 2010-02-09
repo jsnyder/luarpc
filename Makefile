@@ -15,8 +15,10 @@ UNAME := $(shell uname)
 LIBRARY = rpc
 
 # compiler, arguments and libs for GCC under unix
-CFLAGS=-ansi -fpic -std=c99 -pedantic -g -DLUARPC_STANDALONE -DBUILD_RPC -DLUARPC_ENABLE_SOCKET
- 
+CFLAGS += -ansi -fpic -std=c99 -pedantic -g -DLUARPC_STANDALONE -DBUILD_RPC
+
+OBJECTS = luarpc.o luarpc_serial.o luarpc_socket.o serial_posix.o
+
 # compiler, arguments and libs for GCC under windows
 #CC=gcc -Wall
 #CFLAGS=-DWIN32
@@ -26,24 +28,25 @@ CFLAGS=-ansi -fpic -std=c99 -pedantic -g -DLUARPC_STANDALONE -DBUILD_RPC -DLUARP
 # don't change anything below this line
  
 ifeq ($(UNAME), Linux)
-all: linux
+LFLAGS = -O -shared -fpic
 endif
 ifeq ($(UNAME), Darwin)
-all: osx
+LFLAGS = -O -fpic -dynamiclib -undefined dynamic_lookup
 endif
 
 .SUFFIXES: .o .c
 
-%.o : %.c
+socket:
+	CFLAGS=-DLUARPC_ENABLE_SOCKET $(MAKE) $(LIBRARY).so
+
+serial:
+	CFLAGS=-DLUARPC_ENABLE_SERIAL $(MAKE) $(LIBRARY).so
+%.o : %.c $(DEPS)
 	gcc $(CFLAGS) -I$(LUAINC) -o $@ -c $<
 
-OBJECTS = luarpc.o luarpc_serial.o luarpc_socket.o serial_posix.o
+$(LIBRARY).so: $(OBJECTS)
+	gcc $(LFLAGS) -o $(LIBRARY).so $(OBJECTS)
 
-linux: $(OBJECTS)
-	gcc -O -shared -fpic -o rpc.so $(OBJECTS)
-
-osx: $(OBJECTS)
-	gcc -O -fpic -dynamiclib -undefined dynamic_lookup -o rpc.so $(OBJECTS)
- 
+.PHONY : clean
 clean:
 	-rm -rf *~ *.o *.lo *.la *.obj a.out .libs core

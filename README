@@ -17,10 +17,10 @@ BUILDING
 In order to build the module, just type:
 
 Serial Mode:
-make config=serial
+make serial
 
 TCP/IP (Socket) Mode:
-make config=socket
+make socket
 
 NOTE: If you switch between these configurations, make sure to do a make clean between, as it seems to think the target is up to date from the previous build.
 
