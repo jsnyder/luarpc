@@ -10,6 +10,7 @@ LUAINC=/usr/include/lua5.1/
 LUALIB=/usr/local/lib
  
 LIBTOOL=libtool --tag=CC --quiet
+UNAME := $(shell uname)
  
 # compiler, arguments and libs for GCC under unix
 CFLAGS=-ansi -fpic -std=c99 -pedantic -g -DLUARPC_STANDALONE -DBUILD_RPC -DLUARPC_ENABLE_SOCKET
@@ -22,7 +23,12 @@ CFLAGS=-ansi -fpic -std=c99 -pedantic -g -DLUARPC_STANDALONE -DBUILD_RPC -DLUARP
 ##############################################################################
 # don't change anything below this line
  
+ifeq ($(UNAME), Linux)
+all: linux
+endif
+ifeq ($(UNAME), Darwin)
 all: osx
+endif
  
 core: luarpc.c luarpc_socket.c
 	gcc $(CFLAGS) -I$(LUAINC) -c -o luarpc.o luarpc.c
