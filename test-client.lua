@@ -23,6 +23,8 @@ function squareval(x) return x*x end
 -- BEGIN TESTS
 --
 
+for i=1,1000 do
+
 -- check that our connection exists
 assert( slave, "connection failed" )
 
@@ -57,5 +59,5 @@ assert(type(slave.squareval) == "userdata", "function assigment failed")
 
 -- remote execution of assigned function
 assert(slave.squareval(99) == squareval(99), "remote setting and evaluation of function failed")
-
+end
 rpc.close (slave)
