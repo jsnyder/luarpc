@@ -29,6 +29,7 @@ OBJECTS = luarpc.o luarpc_serial.o luarpc_socket.o serial_posix.o
  
 ifeq ($(UNAME), Linux)
 LFLAGS = -O -shared -fpic
+CFLAGS += -D_POSIX_C_SOURCE=199309L
 endif
 ifeq ($(UNAME), Darwin)
 LFLAGS = -O -fpic -dynamiclib -undefined dynamic_lookup
