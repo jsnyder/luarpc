@@ -1,0 +1,26 @@
+cmake_minimum_required (VERSION 2.6)
+project (LuaRPC)
+
+FIND_PACKAGE(Lua51 REQUIRED)
+
+SET(LUAPACKAGE_CDIR "lib/lua/5.1" CACHE STRING "Path for Lua packaged platform specific things.")
+SET(LUAPACKAGE_LDIR "share/lua/5.1" CACHE STRING "Path for Lua packages platform independent things.")
+
+IF(APPLE)
+	SET(LUARPC_LINK_FLAGS "-undefined dynamic_lookup")
+ENDIF(APPLE)
+
+INCLUDE_DIRECTORIES(
+	${LUA_INCLUDE_DIR}
+)
+
+ADD_DEFINITIONS(-DLUARPC_ENABLE_SOCKET  -DLUARPC_STANDALONE -DBUILD_RPC)
+
+SET(SRC_LUARPC luarpc.c luarpc_socket.c)
+
+ADD_LIBRARY( luarpc MODULE ${SRC_LUARPC} )
+SET_TARGET_PROPERTIES(luarpc PROPERTIES PREFIX "" OUTPUT_NAME "rpc")
+SET_TARGET_PROPERTIES(luarpc PROPERTIES COMPILE_FLAGS "${LUA_C_FLAGS}")
+target_link_libraries (luarpc ${LUA_LIBRARIES} ${LUARPC_LINK_FLAGS})
+
+INSTALL(TARGETS luarpc DESTINATION ${LUAPACKAGE_CDIR})
