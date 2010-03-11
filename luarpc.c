@@ -758,10 +758,13 @@ static Helper *helper_create( lua_State *L, Handle *handle, const char *funcname
   Helper *h = ( Helper * )lua_newuserdata( L, sizeof( Helper ) );
   luaL_getmetatable( L, "rpc.helper" );
   lua_setmetatable( L, -2 );
+  
+  lua_pushvalue( L, 1 ); // push parent handle
+  h->pref = luaL_ref( L, LUA_REGISTRYINDEX ); // put ref into struct
   h->handle = handle;
   h->parent = NULL;
   h->nparents = 0;
-  strncpy ( h->funcname, funcname, NUM_FUNCNAME_CHARS );
+  strncpy( h->funcname, funcname, NUM_FUNCNAME_CHARS );
   return h;
 }
 
@@ -1051,6 +1054,9 @@ static Helper *helper_append( lua_State *L, Helper *helper, const char *funcname
   Helper *h = ( Helper * )lua_newuserdata( L, sizeof( Helper ) );
   luaL_getmetatable( L, "rpc.helper" );
   lua_setmetatable( L, -2 );
+  
+  lua_pushvalue( L, 1 ); // push parent
+  h->pref = luaL_ref( L, LUA_REGISTRYINDEX ); // put ref into struct
   h->handle = helper->handle;
   h->parent = helper;
   h->nparents = helper->nparents + 1;
@@ -1058,7 +1064,7 @@ static Helper *helper_append( lua_State *L, Helper *helper, const char *funcname
   return h;
 }
 
-// indexing a handle returns a helper 
+// indexing a helper returns a helper 
 static int helper_index( lua_State *L )
 {
   const char *s;
@@ -1076,6 +1082,17 @@ static int helper_index( lua_State *L )
 
   return 1;
 }
+
+static int helper_close (lua_State *L)
+{
+  Helper *h = ( Helper * )luaL_checkudata(L, 1, "rpc.helper");
+  luaL_argcheck(L, h, 1, "helper expected");
+  
+  luaL_unref(L, LUA_REGISTRYINDEX, h->pref);
+  h->pref = LUA_REFNIL;
+  return 0;
+}
+
 
 // **************************************************************************
 // server side handle userdata objects. 

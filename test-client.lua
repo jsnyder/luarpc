@@ -23,7 +23,7 @@ function squareval(x) return x*x end
 -- BEGIN TESTS
 --
 
-for i=1,1000 do
+for i=1,20 do
 
 -- check that our connection exists
 assert( slave, "connection failed" )
@@ -60,4 +60,22 @@ assert(type(slave.squareval) == "userdata", "function assigment failed")
 -- remote execution of assigned function
 assert(slave.squareval(99) == squareval(99), "remote setting and evaluation of function failed")
 end
+
+-- ensure that we're not loosing critical objects in GC
+tval = 5
+y={}
+y.z={}
+y.z.x = tval
+slave.y=y
+
+a={}
+for i=1,2 do
+  a[i]=slave.y.z
+  collectgarbage("collect")
+end
+for idx,val in ipairs(a) do
+  assert(val:get().x == tval, "missing parent helper")
+  assert(val.x:get() == tval, "missing parent helper")
+end
+
 rpc.close (slave)
