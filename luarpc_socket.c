@@ -26,6 +26,7 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include <netinet/in.h>
 #include <sys/time.h>
 
@@ -195,6 +196,7 @@ int transport_is_open (Transport *tpt)
 void transport_open (Transport *tpt)
 {
   struct exception e;
+  int flag = 1;
   tpt->fd = socket (PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (tpt->fd == INVALID_TRANSPORT) 
   {
@@ -202,6 +204,7 @@ void transport_open (Transport *tpt)
     e.type = fatal;
     Throw( e );
   }
+  setsockopt( tpt->fd, IPPROTO_TCP, TCP_NODELAY, ( char * )&flag, sizeof( int ) );
 }
 
 /* close a socket */
