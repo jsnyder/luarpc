@@ -1000,9 +1000,7 @@ static int helper_call (lua_State *L)
   return freturn;
 }
 
-
-
-
+// __newindex even on helper, 
 static int helper_newindex( lua_State *L )
 {
   struct exception e;
@@ -1019,9 +1017,10 @@ static int helper_newindex( lua_State *L )
   
   Try
   {  
-    // write function name
+    // index destination on remote side
     helper_wait_ready( tpt, RPC_CMD_NEWINDEX );
     helper_remote_index( h );
+
 
     write_variable( tpt, L, lua_gettop( L ) - 1 );
     write_variable( tpt, L, lua_gettop( L ) );
@@ -1638,6 +1637,7 @@ const LUA_REG_TYPE rpc_helper[] =
   { LSTRKEY( "__call" ), LFUNCVAL( helper_call ) },
   { LSTRKEY( "__index" ), LFUNCVAL( helper_index ) },
   { LSTRKEY( "__newindex" ), LFUNCVAL( helper_newindex ) },
+  { LSTRKEY( "__gc" ), LFUNCVAL( helper_close ) },
   { LNILKEY, LNILVAL }
 };
 
@@ -1699,6 +1699,7 @@ static const luaL_reg rpc_helper[] =
   { "__call", helper_call },
   { "__index", helper_index },
   { "__newindex", helper_newindex },
+  { "__gc", helper_close },
   { NULL, NULL }
 };
 
