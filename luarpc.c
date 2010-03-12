@@ -755,7 +755,8 @@ Handle *handle_create( lua_State *L )
 
 static Helper *helper_create( lua_State *L, Handle *handle, const char *funcname )
 {
-  Helper *h = ( Helper * )lua_newuserdata( L, sizeof( Helper ) );
+  size_t len = strlen( funcname );
+  Helper *h = ( Helper * )lua_newuserdata( L, sizeof( Helper ) + len + 1 );
   luaL_getmetatable( L, "rpc.helper" );
   lua_setmetatable( L, -2 );
   
@@ -764,7 +765,7 @@ static Helper *helper_create( lua_State *L, Handle *handle, const char *funcname
   h->handle = handle;
   h->parent = NULL;
   h->nparents = 0;
-  strncpy( h->funcname, funcname, NUM_FUNCNAME_CHARS );
+  strncpy( h->funcname, funcname, len + 1 );
   return h;
 }
 
@@ -1049,7 +1050,8 @@ static int helper_newindex( lua_State *L )
 
 static Helper *helper_append( lua_State *L, Helper *helper, const char *funcname )
 {
-  Helper *h = ( Helper * )lua_newuserdata( L, sizeof( Helper ) );
+  size_t len = strlen( funcname );
+  Helper *h = ( Helper * )lua_newuserdata( L, sizeof( Helper ) + len + 1 );
   luaL_getmetatable( L, "rpc.helper" );
   lua_setmetatable( L, -2 );
   
@@ -1058,7 +1060,7 @@ static Helper *helper_append( lua_State *L, Helper *helper, const char *funcname
   h->handle = helper->handle;
   h->parent = helper;
   h->nparents = helper->nparents + 1;
-  strncpy ( h->funcname, funcname, NUM_FUNCNAME_CHARS );
+  strncpy ( h->funcname, funcname, len + 1 );
   return h;
 }
 

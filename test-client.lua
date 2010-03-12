@@ -23,15 +23,14 @@ function squareval(x) return x*x end
 -- BEGIN TESTS
 --
 
-for i=1,20 do
+for i=1,1000 do
 
 -- check that our connection exists
 assert( slave, "connection failed" )
 
 -- reflect parameters off mirror
-print("Sending 42")
 assert(slave.mirror(42) == 42, "integer return failed")
-print("Done 42")
+
 -- print(slave.mirror("012345673901234")) -- why the heck does this fail for things of length 15 (16 w/ null)?
 -- slave.mirror("01234567890123456789012")
 assert(slave.mirror("The quick brown fox jumps over the lazy dog") == "The quick brown fox jumps over the lazy dog", "string return failed")
@@ -69,7 +68,7 @@ y.z.x = tval
 slave.y=y
 
 a={}
-for i=1,2 do
+for i=1,100 do
   a[i]=slave.y.z
   collectgarbage("collect")
 end

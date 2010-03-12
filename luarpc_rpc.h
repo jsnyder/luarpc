@@ -117,7 +117,7 @@ struct _Helper {
 	Helper *parent;                     // parent helper
   int pref;                           // Parent reference idx in registry
 	u8 nparents;                        // number of parents
-  char funcname[NUM_FUNCNAME_CHARS];  // name of the function
+  char funcname[];                    // name of the variable
 };
 
 typedef struct _ServerHandle ServerHandle;
