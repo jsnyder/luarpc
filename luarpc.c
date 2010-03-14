@@ -308,16 +308,16 @@ static void transport_write_number( Transport *tpt, lua_Number x )
     switch( tpt->lnum_bytes )
     {
       case 4: {
-	float y = ( float )x;
-	if( tpt->net_little != tpt->loc_little )
-	  swap_bytes( ( uint8_t * )&y, 4 );
-	transport_write_buffer( tpt, ( u8 * )&y, 4 );
+        float y = ( float )x;
+        if( tpt->net_little != tpt->loc_little )
+          swap_bytes( ( uint8_t * )&y, 4 );
+        transport_write_buffer( tpt, ( u8 * )&y, 4 );
       } break;
       case 8: {
-	double y = ( double )x;
-	if( tpt->net_little != tpt->loc_little )
-	  swap_bytes( ( uint8_t * )&y, 8 );
-	transport_write_buffer( tpt, ( u8 * )&y, 8 );
+        double y = ( double )x;
+        if( tpt->net_little != tpt->loc_little )
+          swap_bytes( ( uint8_t * )&y, 8 );
+        transport_write_buffer( tpt, ( u8 * )&y, 8 );
       } break;
       default: lua_assert(0);
     }
