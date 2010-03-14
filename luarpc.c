@@ -250,8 +250,20 @@ static lua_Number transport_read_number( Transport *tpt )
     }
   }
   else
-    x = ( lua_Number ) *( lua_Number * )b; // if types match, use native type
-    
+  {
+    switch( tpt->lnum_bytes )
+    {
+    case 4: {
+      float y = *( float * )b;
+      x = ( lua_Number )y;
+    } break;
+    case 8: {
+      double y = *( double * )b;
+      x = ( lua_Number )y;
+    } break;
+    default: lua_assert( 0 );
+    }
+  }
   return x;
 }
 
@@ -293,9 +305,22 @@ static void transport_write_number( Transport *tpt, lua_Number x )
   }
   else
   {
-    if( tpt->net_little != tpt->loc_little )
-       swap_bytes( ( uint8_t * )&x, 8 );
-    transport_write_buffer( tpt, ( u8 * )&x, 8 );
+    switch( tpt->lnum_bytes )
+    {
+      case 4: {
+	float y = ( float )x;
+	if( tpt->net_little != tpt->loc_little )
+	  swap_bytes( ( uint8_t * )&y, 4 );
+	transport_write_buffer( tpt, ( u8 * )&y, 4 );
+      } break;
+      case 8: {
+	double y = ( double )x;
+	if( tpt->net_little != tpt->loc_little )
+	  swap_bytes( ( uint8_t * )&y, 8 );
+	transport_write_buffer( tpt, ( u8 * )&y, 8 );
+      } break;
+      default: lua_assert(0);
+    }
   }
 }
 
@@ -687,7 +712,7 @@ static void server_negotiate( Transport *tpt )
     header[ 6 ] = tpt->lnum_bytes;
   if( header[ 6 ] < tpt->lnum_bytes )
     tpt->lnum_bytes = header[ 6 ];
-  
+
   // if lua_Number is integer on either side, use integer 
   if( header[ 7 ] != tpt->loc_intnum )
     header[ 7 ] = tpt->net_intnum = 1;

@@ -10,8 +10,9 @@ elseif rpc.mode == "serial" then
     slave, err = rpc.connect ("/dev/ttys0");
 end
 
--- Local Dataset
+testdump = 0 -- control whether to test transmitting bytecode
 
+-- Local Dataset
 tab = {a=1, b=2};
 
 test_local = {1, 2, 3, 4, "234"}
@@ -40,9 +41,6 @@ assert(slave.mirror(true) == true, "function return failed")
 -- basic remote call with returned data
 assert( slave.foo1 (123,56,"hello") == 456, "basic call and return failed" )
 
--- execute function remotely
-assert(slave.execfunc( string.dump(squareval), 8 ) == 64, "couldn't serialize and execute dumped function")
-
 -- get remote table
 assert(slave.test:get(), "couldn't get remote table")
 
@@ -52,12 +50,18 @@ assert(test_local.sval == slave.test:get().sval, "table field not equivalent")
 slave.yarg.blurg = 23
 assert(slave.yarg.blurg:get() == 23, "not equal")
 
--- function assigment
-slave.squareval = squareval
-assert(type(slave.squareval) == "userdata", "function assigment failed")
+if testdump~=0 then
+  -- execute function remotely
+  assert(slave.execfunc( string.dump(squareval), 8 ) == 64, "couldn't serialize and execute dumped function")
 
--- remote execution of assigned function
-assert(slave.squareval(99) == squareval(99), "remote setting and evaluation of function failed")
+  -- function assigment
+  slave.squareval = squareval
+  assert(type(slave.squareval) == "userdata", "function assigment failed")
+
+  -- remote execution of assigned function
+  assert(slave.squareval(99) == squareval(99), "remote setting and evaluation of function failed")
+end
+
 end
 
 -- ensure that we're not loosing critical objects in GC
