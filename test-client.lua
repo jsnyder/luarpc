@@ -78,4 +78,7 @@ for idx,val in ipairs(a) do
   assert(val.x:get() == tval, "missing parent helper")
 end
 
+
+slave.oxn.blarg()
+
 rpc.close (slave)

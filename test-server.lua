@@ -59,14 +59,11 @@ end
 
 -- an alternative way
 
--- count = 0;
--- handle = rpc.listen ("/dev/ptys0");
--- while 1 do
---   if rpc.peek (handle) then
---     io.write ("dispatch\n")
---     rpc.dispatch (handle)
---   else
---     io.write ("do dee do " .. count .. "...\n")
---   end
---   count = count + 1;
--- end
+handle = rpc.listen (3,0);
+while 1 do
+  if rpc.peek (handle) then
+    rpc.dispatch (handle)
+  else
+    -- do other junk
+  end
+end
