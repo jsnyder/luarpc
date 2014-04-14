@@ -831,10 +831,10 @@ static void helper_remote_index( Helper *helper )
     for( i = helper->nparents - 1 ; i > 0 ; i -- )
     {
       hstack[ i - 1 ] = hstack[ i ]->parent;
-      len += strlen( hstack[ i ]->funcname ) + 1;
+      len += strlen( hstack[ i - 1 ]->funcname ) + 1;
     }
 
-	  transport_write_u32( tpt, len );
+    transport_write_u32( tpt, len );
 
     // replay helper key names
     for( i = 0 ; i < helper->nparents ; i ++ )
@@ -844,7 +844,7 @@ static void helper_remote_index( Helper *helper )
     }
   }
   else // If helper has no parents, just use length of global
-	  transport_write_u32( tpt, len );
+    transport_write_u32( tpt, len );
 
   transport_write_string( tpt, helper->funcname, strlen( helper->funcname ) );
 }
@@ -1227,12 +1227,21 @@ static void read_cmd_call( Transport *tpt, lua_State *L )
   // @@@ also strtok is not thread safe
   token = strtok( funcname, "." );
   lua_getglobal( L, token );
-  token = strtok( NULL, "." );
-  while( token != NULL )
+  if( LUA_ISCALLABLE( L, -1 ) || lua_istable( L, -1 ) ) // only continue if non-nil
   {
-    lua_getfield( L, -1, token );
-    lua_remove( L, -2 );
     token = strtok( NULL, "." );
+
+    // loop over remainder of string, leaving token with last value if
+    // indexing fails
+    while( token != NULL && ( LUA_ISCALLABLE( L, -1 ) || lua_istable( L, -1 ) ) )
+    {
+      lua_getfield( L, -1, token );
+      if ( LUA_ISCALLABLE( L, -1 ) || lua_istable( L, -1 ) )
+      {
+        lua_remove( L, -2 );
+        token = strtok( NULL, "." );
+      }
+    }
   }
   stackpos = lua_gettop( L ) - 1;
   good_function = LUA_ISCALLABLE( L, -1 );
@@ -1253,13 +1262,13 @@ static void read_cmd_call( Transport *tpt, lua_State *L )
     // handle errors
     if ( error_code )
     {
-      size_t len;
+      size_t elen;
       const char *errmsg;
-      errmsg = lua_tolstring (L, -1, &len);
+      errmsg = lua_tolstring( L, -1, &elen );
       transport_write_u8( tpt, 1 );
       transport_write_u32( tpt, error_code );
-      transport_write_u32( tpt, len );
-      transport_write_string( tpt, errmsg, len );
+      transport_write_u32( tpt, ( u32 )elen );
+      transport_write_string( tpt, errmsg, ( int )elen );
     }
     else
     {
@@ -1273,14 +1282,22 @@ static void read_cmd_call( Transport *tpt, lua_State *L )
   }
   else
   {
-    // bad function
-    const char *msg = "undefined function: ";
-    int errlen = strlen( msg ) + len;
+    // bad index or function call
+    const char *msg;
+    if ( lua_isnil( L, -1 ) )
+      msg = "undefined: ";
+    else if ( lua_istable( L, -1 ) )
+      msg = "attempted to call table";
+    else
+      msg = "not table/function: ";
+    if( token == NULL ) // should occur if "function" was actually a table
+      token = "";
+    int errlen = ( int )strlen( msg ) + strlen( token );
     transport_write_u8( tpt, 1 );
     transport_write_u32( tpt, LUA_ERRRUN );
     transport_write_u32( tpt, errlen );
-    transport_write_string( tpt, msg, strlen( msg ) );
-    transport_write_string( tpt, funcname, len );
+    transport_write_string( tpt, msg, ( int )strlen( msg ) );
+    transport_write_string( tpt, token, strlen( token ) );
   }
   // empty the stack
   lua_settop ( L, 0 );

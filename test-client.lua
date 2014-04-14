@@ -78,7 +78,9 @@ for idx,val in ipairs(a) do
   assert(val.x:get() == tval, "missing parent helper")
 end
 
+slave.y.z.asdasd = squareval
 
-slave.oxn.blarg()
+print('trying slave.x.asd.blarg()')
+slave.y.z.asdasd(2)
 
 rpc.close (slave)
